@@ -2803,8 +2803,8 @@ git commit -m "feat: referral landing route and home referral banner"
 - Test: `tests/web/test_chat.py`
 
 **Interfaces:**
-- Consumes: `Orchestrator` (Task 18), `find_referrer` (Task 17), `get_db`, `get_llm_provider` (Task 20).
-- Produces: `POST /api/chat/message` (form field `message`, sets `piscinow_session` cookie, returns the assistant's full reply as `text/plain` via `StreamingResponse`).
+- Consumes: `Orchestrator` (Task 18), `Extractor` (Task 19), `find_referrer` (Task 17), `get_db`, `get_llm_provider` (Task 20).
+- Produces: `POST /api/chat/message` (form field `message`, sets `piscinow_session` cookie, returns the assistant's full reply as `text/plain` via `StreamingResponse`). When a turn finalizes (`result.finalized is True`), schedules `Extractor.process(conversation)` as a FastAPI `BackgroundTasks` job — this is the plan's wiring of the spec's "loop de aprendizado": the Extractor built in Task 19 is otherwise never invoked by the running application.
 
 - [ ] **Step 1: Write the failing tests — `tests/web/test_chat.py`**
 
@@ -2862,6 +2862,27 @@ def test_referred_visitor_gets_auto_approved_member(client, db_session):
 
     member = db_session.query(Member).filter(Member.name == "Joao Silva").one()
     assert member.status == MemberStatus.APPROVED
+
+
+def test_finalized_conversation_schedules_extractor(client, db_session):
+    provider = FakeLLMProvider()
+    client.app.dependency_overrides[get_llm_provider] = lambda: provider
+
+    provider.queue_response('{"profile": "embaixador", "confidence": 0.9}')
+    first = client.post("/api/chat/message", data={"message": "quero ser embaixador"})
+    client.cookies.set("piscinow_session", first.cookies.get("piscinow_session"))
+
+    provider.queue_response('{"name": "Ana Paula", "contact": "19977776666"}')
+    # Consumed by the Extractor's background call after finalization:
+    provider.queue_response("Visitantes que querem ser embaixador costumam ja ter indicacoes em mente.")
+    client.post("/api/chat/message", data={"message": "Ana Paula, 19977776666"})
+
+    from piscinow.agent.memory_store import MemoryStore
+    from piscinow.models.member import ProfileType as PT
+
+    memory = MemoryStore(db_session)
+    results = memory.search(query="embaixador com indicacoes em mente", profile_type=PT.EMBAIXADOR, limit=5)
+    assert any("indicacoes" in r.content for r in results)
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -2874,11 +2895,13 @@ Expected: FAIL — `404` on `/api/chat/message` (route doesn't exist yet)
 ```python
 import uuid
 
-from fastapi import APIRouter, Cookie, Depends, Form, Response
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from piscinow.agent.extractor import Extractor
 from piscinow.agent.llm_provider import LLMProvider
+from piscinow.agent.memory_store import MemoryStore
 from piscinow.agent.orchestrator import Orchestrator
 from piscinow.models.conversation import Conversation
 from piscinow.referral import find_referrer
@@ -2907,6 +2930,7 @@ def _get_or_create_conversation(db: Session, session_id: str | None) -> tuple[Co
 @router.post("/api/chat/message")
 async def send_message(
     response: Response,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     db: Session = Depends(get_db),
     llm: LLMProvider = Depends(get_llm_provider),
@@ -2924,9 +2948,23 @@ async def send_message(
     # StreamingResponse keeps the wire contract open for true token streaming later.
     async def body():
         result = await orchestrator.handle_user_message(conversation, message, referred_by=referrer)
+        if result.finalized:
+            # Best-effort learning loop (spec: "roda ao final de cada conversa,
+            # background, best-effort") — never blocks the reply.
+            background_tasks.add_task(_run_extractor, db, llm, conversation)
         yield result.reply_text
 
     return StreamingResponse(body(), media_type="text/plain")
+
+
+async def _run_extractor(db: Session, llm: LLMProvider, conversation: Conversation) -> None:
+    # No explicit db.commit() here: `MemoryStore.write` already flushes, and
+    # `get_db`'s own post-yield commit (Task 20) runs after background tasks
+    # complete, persisting this write in production. Committing here would
+    # also break the tests' rollback-based session isolation (Task 2's
+    # `db_session` fixture), since in tests `db` is that same fixture session.
+    extractor = Extractor(llm, MemoryStore(db))
+    await extractor.process(conversation)
 ```
 
 - [ ] **Step 4: Write `src/piscinow/static/js/chat.js`**
@@ -2967,13 +3005,13 @@ document.addEventListener("DOMContentLoaded", () => {
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `pytest tests/web/test_chat.py -v`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/piscinow/web/routes/chat.py src/piscinow/static/js/chat.js tests/web/test_chat.py
-git commit -m "feat: chat endpoint wired to the Orchestrator"
+git commit -m "feat: chat endpoint wired to the Orchestrator and Extractor"
 ```
 
 ---
@@ -3535,7 +3573,7 @@ Add these imports near the top, and inside `create_app()` after `app.state.llm_p
 
 - [ ] **Step 5: Modify `src/piscinow/web/routes/chat.py`** — decorate the route
 
-Add `from fastapi import Request` to the existing `fastapi` import line, add `from piscinow.rate_limit import chat_rate_limit_string, limiter`, add `request: Request` as the route's first parameter, and decorate:
+Add `Request` to the existing `from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form, Response` line (so it reads `from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form, Request, Response`), add `from piscinow.rate_limit import chat_rate_limit_string, limiter`, add `request: Request` as the route's first parameter (`background_tasks: BackgroundTasks` — already present from Task 22 — stays right after it), and decorate:
 
 ```python
 @router.post("/api/chat/message")
@@ -3543,6 +3581,7 @@ Add `from fastapi import Request` to the existing `fastapi` import line, add `fr
 async def send_message(
     request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     db: Session = Depends(get_db),
     llm: LLMProvider = Depends(get_llm_provider),

@@ -8,7 +8,7 @@ from piscinow.db import Base
 # Importing every model module here ensures Base.metadata knows about all
 # tables before `create_all` runs in the `engine` fixture below.
 import piscinow.models.member  # noqa: E402,F401
-# import piscinow.models.conversation  # noqa: E402,F401
+import piscinow.models.conversation  # noqa: E402,F401
 # import piscinow.models.memory  # noqa: E402,F401
 # import piscinow.models.admin  # noqa: E402,F401
 

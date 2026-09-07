@@ -2,58 +2,59 @@
 <title>Clube Piscinow</title>
 <style>
   :root{
-    --ink:#0F2E30;
-    --ink-soft:#516665;
-    --paper:#E7ECEA;
-    --paper-raised:#F4F7F5;
-    --line:rgba(15,46,48,0.18);
-    --line-strong:rgba(15,46,48,0.32);
-    --accent:#0E8F94;
-    --accent-strong:#0B6E72;
-    --gold:#B98A3D;
-    --gold-soft:rgba(185,138,61,0.14);
-    --bubble-user:#0F2E30;
-    --bubble-user-text:#EAF3F2;
+    --ink:#0A2A43;
+    --ink-soft:#4C6B85;
+    --paper:#FFFFFF;
+    --paper-raised:#F2F6FB;
+    --line:rgba(10,42,67,0.14);
+    --line-strong:rgba(10,42,67,0.28);
+    --accent:#0E7FC4;
+    --accent-strong:#0B5C96;
+    --on-accent:#FFFFFF;
+    --gold:#C9962E;
+    --gold-soft:rgba(201,150,46,0.14);
+    --bubble-user:#0A2A43;
+    --bubble-user-text:#F2F6FB;
     --bubble-agent:#FFFFFF;
-    --bubble-agent-text:#123032;
-    --tag-pending:#B98A3D;
-    --tag-active:#0E8F94;
-    --shadow-soft: 0 1px 2px rgba(15,46,48,0.06), 0 8px 24px rgba(15,46,48,0.08);
+    --bubble-agent-text:#123049;
+    --shadow-soft: 0 1px 2px rgba(10,42,67,0.08), 0 8px 24px rgba(10,42,67,0.10);
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ink:#E7EDEC;
-      --ink-soft:#9FB4B2;
-      --paper:#0B1F20;
-      --paper-raised:#122E30;
-      --line:rgba(231,237,236,0.14);
-      --line-strong:rgba(231,237,236,0.26);
-      --accent:#3FC7CC;
-      --accent-strong:#63D7DB;
-      --gold:#D9A85C;
-      --gold-soft:rgba(217,168,92,0.16);
-      --bubble-user:#123032;
-      --bubble-user-text:#EAF3F2;
-      --bubble-agent:#16393B;
-      --bubble-agent-text:#E7EDEC;
+      --ink:#EAF2FA;
+      --ink-soft:#9FB8CE;
+      --paper:#071B2C;
+      --paper-raised:#0E2C42;
+      --line:rgba(234,242,250,0.14);
+      --line-strong:rgba(234,242,250,0.26);
+      --accent:#4FB3F0;
+      --accent-strong:#7CC6F5;
+      --on-accent:#062338;
+      --gold:#E0BA66;
+      --gold-soft:rgba(224,186,102,0.16);
+      --bubble-user:#0E2C42;
+      --bubble-user-text:#EAF2FA;
+      --bubble-agent:#123049;
+      --bubble-agent-text:#EAF2FA;
       --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
     }
   }
   :root[data-theme="dark"]{
-    --ink:#E7EDEC;
-    --ink-soft:#9FB4B2;
-    --paper:#0B1F20;
-    --paper-raised:#122E30;
-    --line:rgba(231,237,236,0.14);
-    --line-strong:rgba(231,237,236,0.26);
-    --accent:#3FC7CC;
-    --accent-strong:#63D7DB;
-    --gold:#D9A85C;
-    --gold-soft:rgba(217,168,92,0.16);
-    --bubble-user:#123032;
-    --bubble-user-text:#EAF3F2;
-    --bubble-agent:#16393B;
-    --bubble-agent-text:#E7EDEC;
+    --ink:#EAF2FA;
+    --ink-soft:#9FB8CE;
+    --paper:#071B2C;
+    --paper-raised:#0E2C42;
+    --line:rgba(234,242,250,0.14);
+    --line-strong:rgba(234,242,250,0.26);
+    --accent:#4FB3F0;
+    --accent-strong:#7CC6F5;
+    --on-accent:#062338;
+    --gold:#E0BA66;
+    --gold-soft:rgba(224,186,102,0.16);
+    --bubble-user:#0E2C42;
+    --bubble-user-text:#EAF2FA;
+    --bubble-agent:#123049;
+    --bubble-agent-text:#EAF2FA;
     --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
   }
 
@@ -159,7 +160,7 @@
   .btn.accent{
     background:var(--accent);
     border-color:var(--accent);
-    color:#062B2D;
+    color:var(--on-accent);
   }
 
   @media (max-width:760px){
@@ -368,8 +369,8 @@
     border-radius:2px;
     border:1px solid currentColor;
   }
-  .status-tag.pending{ color:var(--tag-pending); }
-  .status-tag.active{ color:var(--tag-active); }
+  .status-tag.pending{ color:var(--gold); }
+  .status-tag.active{ color:var(--accent-strong); }
 
   .chat-body{
     padding:18px 16px;

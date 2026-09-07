@@ -42,6 +42,7 @@ class MemoryStore:
         profile_type: ProfileType | None = None,
         limit: int = 5,
     ) -> list[MemoryItem]:
+        self._session.flush()
         query_vector = embed_text(query)
         candidate_limit = max(limit * 4, 20)
         stmt = select(MemoryItem).where(MemoryItem.superseded_by.is_(None))

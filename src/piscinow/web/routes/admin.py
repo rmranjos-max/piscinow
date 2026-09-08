@@ -3,11 +3,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from piscinow.agent.memory_store import MemoryStore
 from piscinow.auth import login as do_login
 from piscinow.auth import logout as do_logout
 from piscinow.auth import require_admin
 from piscinow.models.admin import AdminUser
-from piscinow.models.member import Member, MemberStatus
+from piscinow.models.conversation import Conversation
+from piscinow.models.member import Member, MemberStatus, ProfileType
+from piscinow.models.memory import MemoryKind, MemorySource
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/admin")
@@ -69,3 +72,33 @@ async def recusar(
     if member is not None:
         member.reject(approved_by=admin.email)
     return RedirectResponse(url="/admin/fila", status_code=303)
+
+
+@router.get("/correcoes", response_class=HTMLResponse)
+async def correcoes(
+    request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)
+):
+    templates = request.app.state.templates
+    conversations = list(
+        db.scalars(select(Conversation).order_by(Conversation.started_at.desc()).limit(20))
+    )
+    return templates.TemplateResponse(request, "admin_corrections.html", {"conversations": conversations})
+
+
+@router.post("/correcoes/ensinar")
+async def ensinar(
+    content: str = Form(...),
+    profile_type: str = Form(...),
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    memory = MemoryStore(db)
+    memory.write(
+        content=content,
+        kind=MemoryKind.CORRECTION,
+        source=MemorySource.HUMAN,
+        profile_type=ProfileType(profile_type) if profile_type != "geral" else None,
+        confidence=0.9,
+        created_by=admin.email,
+    )
+    return RedirectResponse(url="/admin/correcoes", status_code=303)

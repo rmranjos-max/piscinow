@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <h1>Ensinar o concierge</h1>
+  <form method="post" action="/admin/correcoes/ensinar">
+    <select name="profile_type">
+      <option value="geral">Geral</option>
+      <option value="comprador">Comprador</option>
+      <option value="loja">Loja</option>
+      <option value="prestador">Prestador</option>
+      <option value="embaixador">Embaixador</option>
+    </select>
+    <textarea name="content" placeholder="Escreva o aprendizado em uma frase curta"></textarea>
+    <button type="submit">Salvar</button>
+  </form>
+
+  <h2>Conversas recentes</h2>
+  <ul>
+  {% for conversation in conversations %}
+    <li>
+      {{ conversation.profile_type_detected.value if conversation.profile_type_detected else "nao identificado" }}
+      — {{ conversation.started_at }}
+      <ul>
+      {% for message in conversation.messages %}
+        <li><strong>{{ message.role.value }}:</strong> {{ message.content }}</li>
+      {% endfor %}
+      </ul>
+    </li>
+  {% endfor %}
+  </ul>
+</main>
+{% endblock %}

@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -40,7 +40,9 @@ class Member(Base):
     referred_by_member_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("members.id"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
@@ -52,7 +54,7 @@ class Member(Base):
         if 'profile_details' not in kwargs:
             kwargs['profile_details'] = {}
         if 'created_at' not in kwargs:
-            kwargs['created_at'] = datetime.utcnow()
+            kwargs['created_at'] = datetime.now(timezone.utc)
         super().__init__(**kwargs)
 
     def submit_for_review(self) -> None:
@@ -63,16 +65,16 @@ class Member(Base):
     def approve(self, *, approved_by: str) -> None:
         self.status = MemberStatus.APPROVED
         self.approved_by = approved_by
-        self.approved_at = datetime.utcnow()
+        self.approved_at = datetime.now(timezone.utc)
 
     def reject(self, *, approved_by: str) -> None:
         self.status = MemberStatus.REJECTED
         self.approved_by = approved_by
-        self.approved_at = datetime.utcnow()
+        self.approved_at = datetime.now(timezone.utc)
 
     def auto_approve_via_referral(self) -> None:
         if self.referred_by_member_id is None:
             raise ValueError("cannot auto-approve a member without a referral")
         self.status = MemberStatus.APPROVED
         self.approved_by = "referral"
-        self.approved_at = datetime.utcnow()
+        self.approved_at = datetime.now(timezone.utc)

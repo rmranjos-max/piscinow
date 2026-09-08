@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: piscinow
     volumes:
       - piscinow_db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
 
   app:
     build: .
@@ -20,6 +18,7 @@ services:
       PISCINOW_ANTHROPIC_API_KEY: ${PISCINOW_ANTHROPIC_API_KEY:-}
       PISCINOW_OPENAI_API_KEY: ${PISCINOW_OPENAI_API_KEY:-}
       PISCINOW_SESSION_SECRET: ${PISCINOW_SESSION_SECRET:?session secret required}
+      PISCINOW_PUBLIC_BASE_URL: ${PISCINOW_PUBLIC_BASE_URL:-http://localhost:8000}
     ports:
       - "8000:8000"
 

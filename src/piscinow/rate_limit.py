@@ -9,3 +9,7 @@ limiter = Limiter(key_func=get_remote_address)
 def chat_rate_limit_string() -> str:
     settings = get_settings()
     return f"{settings.chat_rate_limit_per_minute}/minute"
+
+
+def admin_login_rate_limit_string() -> str:
+    return "5/minute"

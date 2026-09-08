@@ -11,6 +11,7 @@ from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import Conversation
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.memory import MemoryKind, MemorySource
+from piscinow.rate_limit import admin_login_rate_limit_string, limiter
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/admin")
@@ -23,6 +24,7 @@ async def login_form(request: Request):
 
 
 @router.post("/login")
+@limiter.limit(admin_login_rate_limit_string)
 async def login_submit(
     request: Request,
     email: str = Form(...),

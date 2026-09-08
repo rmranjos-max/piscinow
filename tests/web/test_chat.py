@@ -1,6 +1,7 @@
 from piscinow.agent.providers.fake_provider import FakeLLMProvider
 from piscinow.models.conversation import Conversation
 from piscinow.models.member import Member, MemberStatus, ProfileType
+from piscinow.models.memory import MemoryItem
 from piscinow.web.deps import get_llm_provider
 
 
@@ -97,3 +98,6 @@ def test_extractor_not_rescheduled_after_conversation_already_finalized(client, 
         "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
         in third.text
     )
+    # Extractor must have run exactly once (on the finalizing turn) and must
+    # NOT have been rescheduled on this third, already-finalized message.
+    assert db_session.query(MemoryItem).count() == 1

@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -24,7 +24,9 @@ class Conversation(Base):
         SAEnum(ProfileType, name="profile_type"), nullable=True
     )
     collected_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     messages: Mapped[list["Message"]] = relationship(back_populates="conversation", order_by="Message.created_at")
@@ -37,6 +39,8 @@ class Message(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("conversations.id"))
     role: Mapped[MessageRole] = mapped_column(SAEnum(MessageRole, name="message_role"))
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

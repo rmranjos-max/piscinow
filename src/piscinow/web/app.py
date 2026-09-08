@@ -1,3 +1,7 @@
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,14 +14,31 @@ from piscinow.config import get_settings
 from piscinow.rate_limit import limiter
 from piscinow.web.routes import admin, chat, pages
 
-TEMPLATES = Jinja2Templates(directory="src/piscinow/web/templates")
+logger = logging.getLogger(__name__)
+
+_HERE = Path(__file__).resolve().parent
+
+TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from piscinow.agent.embeddings import embed_text
+
+    embed_text("warmup")  # forces the model to load at startup, not on first chat message
+    yield
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="Clube Piscinow")
+    if settings.session_secret == "change-me-in-production":
+        logger.warning(
+            "PISCINOW_SESSION_SECRET is using the insecure default value. "
+            "Set a real secret before deploying to production."
+        )
+    app = FastAPI(title="Clube Piscinow", lifespan=lifespan)
     app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
-    app.mount("/static", StaticFiles(directory="src/piscinow/static"), name="static")
+    app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)
     app.state.limiter = limiter

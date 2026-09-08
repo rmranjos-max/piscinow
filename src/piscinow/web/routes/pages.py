@@ -15,7 +15,9 @@ async def convite(code: str, db: Session = Depends(get_db)):
     referrer = find_referrer(db, code)
     response = RedirectResponse(url="/")
     if referrer is not None:
-        response.set_cookie(REFERRAL_COOKIE, code, max_age=60 * 60 * 24 * 30)
+        response.set_cookie(
+            REFERRAL_COOKIE, code, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax"
+        )
     return response
 
 

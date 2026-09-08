@@ -104,3 +104,40 @@ async def test_embaixador_flow_generates_referral_code_in_reply(db_session):
     member = db_session.get(Member, conversation.member_id)
     assert member.referral_code is not None
     assert member.referral_code in result.reply_text
+
+
+@pytest.mark.asyncio
+async def test_second_message_after_finalization_does_not_duplicate_member(db_session):
+    provider = FakeLLMProvider()
+    orchestrator = Orchestrator(db_session, provider)
+    conversation = Conversation()
+    db_session.add(conversation)
+    db_session.flush()
+
+    # First turn: classification
+    provider.queue_response('{"profile": "comprador", "confidence": 0.9}')
+    provider.queue_response('{"name": null, "contact": null, "region": null, "intent": null}')
+    result = await orchestrator.handle_user_message(conversation, "quero fazer uma piscina", referred_by=None)
+    assert result.finalized is False
+
+    # Second turn: complete all fields, finalize conversation
+    provider.queue_response(
+        '{"name": "Marina Duarte", "contact": "(19) 99999-0000", "region": "Valinhos", "intent": "alvenaria 6x3"}'
+    )
+    result = await orchestrator.handle_user_message(
+        conversation,
+        "Marina Duarte, (19) 99999-0000, em Valinhos, alvenaria 6x3",
+        referred_by=None,
+    )
+    assert result.finalized is True
+    initial_member_count = db_session.query(Member).count()
+    assert initial_member_count == 1
+
+    # Third turn: send another message after finalization
+    result = await orchestrator.handle_user_message(conversation, "mais uma pergunta", referred_by=None)
+
+    # Verify the guard is working
+    assert result.finalized is True
+    assert result.reply_text == "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
+    # Verify no duplicate Member was created
+    assert db_session.query(Member).count() == 1

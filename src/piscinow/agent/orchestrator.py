@@ -45,6 +45,11 @@ class Orchestrator:
     ) -> TurnResult:
         self._session.add(Message(conversation=conversation, role=MessageRole.USER, content=message_text))
         self._session.flush()
+
+        if conversation.member_id is not None:
+            reply_text = "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
+            return TurnResult(reply_text=reply_text, finalized=True)
+
         history = self._history_as_messages(conversation)
 
         if conversation.profile_type_detected is None:

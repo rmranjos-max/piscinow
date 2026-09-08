@@ -1,0 +1,156 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\RodrigodosAnjos\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\RodrigodosAnjos\Documents\projetos-claude\piscinow\.worktrees\piscinow-landing-clube-agente
+configfile: pyproject.toml
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/models/test_member.py::test_member_persists_and_reloads ERROR      [100%]
+
+=================================== ERRORS ====================================
+_____________ ERROR at setup of test_member_persists_and_reloads ______________
+
+self = <docker.api.client.APIClient object at 0x000002526FD3EE40>
+
+    def _retrieve_server_version(self):
+        try:
+>           return self.version(api_version=False)["ApiVersion"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\api\client.py:223: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\api\daemon.py:181: in version
+    return self._result(self._get(url), json=True)
+                        ^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\utils\decorators.py:44: in inner
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\api\client.py:246: in _get
+    return self.get(url, **self._set_request_timeout(kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\sessions.py:602: in get
+    return self.request("GET", url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\sessions.py:589: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\sessions.py:703: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\requests\adapters.py:667: in send
+    resp = conn.urlopen(
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\urllib3\connectionpool.py:787: in urlopen
+    response = self._make_request(
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\urllib3\connectionpool.py:493: in _make_request
+    conn.request(
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\urllib3\connection.py:500: in request
+    self.endheaders()
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\http\client.py:1353: in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\http\client.py:1113: in _send_output
+    self.send(msg)
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\http\client.py:1057: in send
+    self.connect()
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\transport\npipeconn.py:25: in connect
+    sock.connect(self.npipe_path)
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\transport\npipesocket.py:25: in wrapped
+    return f(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\transport\npipesocket.py:76: in connect
+    raise e
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <docker.transport.npipesocket.NpipeSocket object at 0x000002526FDBC050>
+address = '//./pipe/docker_engine', retry_count = 0
+
+    @check_closed
+    def connect(self, address, retry_count=0):
+        try:
+>           handle = win32file.CreateFile(
+                address,
+                win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+                0,
+                None,
+                win32file.OPEN_EXISTING,
+                (cSECURITY_ANONYMOUS
+                    | cSECURITY_SQOS_PRESENT
+                    | win32file.FILE_FLAG_OVERLAPPED),
+                0
+            )
+E           pywintypes.error: (2, 'CreateFile', 'O sistema não pode encontrar o arquivo especificado.')
+
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\transport\npipesocket.py:54: error
+
+The above exception was the direct cause of the following exception:
+
+fixturedef = <FixtureDef argname='postgres_container' scope='session' baseid='tests'>
+request = <SubRequest 'postgres_container' for <Function test_member_persists_and_reloads>>
+
+    @pytest.hookimpl(wrapper=True)
+    def pytest_fixture_setup(fixturedef: FixtureDef, request) -> object | None:
+        if (
+            fixturedef.argname == "event_loop_policy"
+            and fixturedef.func.__module__ != __name__
+        ):
+            warnings.warn(
+                PytestDeprecationWarning(_EVENT_LOOP_POLICY_FIXTURE_DEPRECATION_WARNING),
+            )
+        asyncio_mode = _get_asyncio_mode(request.config)
+        if not _is_asyncio_fixture_function(fixturedef.func):
+            if asyncio_mode == Mode.STRICT:
+                # Ignore async fixtures without explicit asyncio mark in strict mode
+                # This applies to pytest_trio fixtures, for example
+>               return (yield)
+                        ^^^^^
+
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py:924: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\conftest.py:18: in postgres_container
+    with PostgresContainer("pgvector/pgvector:pg16") as container:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\testcontainers\community\postgres\__init__.py:59: in __init__
+    super().__init__(image=image, **kwargs)
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\testcontainers\core\container.py:129: in __init__
+    self._docker = DockerClient(**(docker_client_kw or {}))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\testcontainers\core\docker_client.py:194: in __init__
+    self.client = docker.from_env(**kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\client.py:110: in from_env
+    return cls(
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\client.py:48: in __init__
+    self.api = APIClient(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\api\client.py:207: in __init__
+    self._version = self._retrieve_server_version()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <docker.api.client.APIClient object at 0x000002526FD3EE40>
+
+    def _retrieve_server_version(self):
+        try:
+            return self.version(api_version=False)["ApiVersion"]
+        except KeyError as ke:
+            raise DockerException(
+                'Invalid response from docker daemon: key "ApiVersion"'
+                ' is missing.'
+            ) from ke
+        except Exception as e:
+>           raise DockerException(
+                f'Error while fetching server API version: {e}'
+            ) from e
+E           docker.errors.DockerException: Error while fetching server API version: (2, 'CreateFile', 'O sistema não pode encontrar o arquivo especificado.')
+
+..\..\..\..\..\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\docker\api\client.py:230: DockerException
+============================== warnings summary ===============================
+tests\conftest.py:4
+  C:\Users\RodrigodosAnjos\Documents\projetos-claude\piscinow\.worktrees\piscinow-landing-clube-agente\tests\conftest.py:4: DeprecationWarning: testcontainers.postgres is deprecated, use testcontainers.community.postgres instead
+    from testcontainers.postgres import PostgresContainer
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+ERROR tests/models/test_member.py::test_member_persists_and_reloads - docker....
+========================= 1 warning, 1 error in 0.20s =========================

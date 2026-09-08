@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <h1>Clube Piscinow</h1>
+  <p>Um clube de piscinas, nao uma loja.</p>
+  <section id="chat">
+    <div id="chat-body"></div>
+    <form id="chat-form">
+      <input id="chat-input" type="text" name="message" placeholder="Fale com o concierge...">
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+</main>
+<script src="/static/js/chat.js"></script>
+{% endblock %}

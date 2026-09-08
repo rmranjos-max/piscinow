@@ -1,0 +1,4 @@
+body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+#chat-body { border: 1px solid #ccc; min-height: 200px; padding: 0.5rem; margin-bottom: 0.5rem; }
+.msg { margin: 0.25rem 0; }
+.msg.user { text-align: right; }

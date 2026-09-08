@@ -1,0 +1,27 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: piscinow
+      POSTGRES_PASSWORD: piscinow
+      POSTGRES_DB: piscinow
+    volumes:
+      - piscinow_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      PISCINOW_DATABASE_URL: postgresql+psycopg://piscinow:piscinow@db:5432/piscinow
+      PISCINOW_LLM_PROVIDER: ${PISCINOW_LLM_PROVIDER:-fake}
+      PISCINOW_ANTHROPIC_API_KEY: ${PISCINOW_ANTHROPIC_API_KEY:-}
+      PISCINOW_OPENAI_API_KEY: ${PISCINOW_OPENAI_API_KEY:-}
+      PISCINOW_SESSION_SECRET: ${PISCINOW_SESSION_SECRET:?session secret required}
+    ports:
+      - "8000:8000"
+
+volumes:
+  piscinow_db_data:

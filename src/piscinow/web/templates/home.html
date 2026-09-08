@@ -2,6 +2,9 @@
 {% block content %}
 <main>
   <h1>Clube Piscinow</h1>
+  {% if referred_by_name %}
+    <p class="referral-banner">Voce foi indicado por {{ referred_by_name }} — entrada facilitada no Clube.</p>
+  {% endif %}
   <p>Um clube de piscinas, nao uma loja.</p>
   <section id="chat">
     <div id="chat-body"></div>

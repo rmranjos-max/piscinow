@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+  <h1>Fila de admissao</h1>
+  <table>
+    <thead><tr><th>Nome</th><th>Perfil</th><th>Regiao</th><th>Acao</th></tr></thead>
+    <tbody>
+    {% for member in members %}
+      <tr>
+        <td>{{ member.name }}</td>
+        <td>{{ member.profile_type.value }}</td>
+        <td>{{ member.region or member.profile_details.get("region", "-") }}</td>
+        <td>
+          <form method="post" action="/admin/fila/{{ member.id }}/aprovar" style="display:inline">
+            <button type="submit">Aprovar</button>
+          </form>
+          <form method="post" action="/admin/fila/{{ member.id }}/recusar" style="display:inline">
+            <button type="submit">Recusar</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock %}

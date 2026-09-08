@@ -72,3 +72,28 @@ def test_finalized_conversation_schedules_extractor(client, db_session):
     memory = MemoryStore(db_session)
     results = memory.search(query="embaixador com indicacoes em mente", profile_type=PT.EMBAIXADOR, limit=5)
     assert any("indicacoes" in r.content for r in results)
+
+
+def test_extractor_not_rescheduled_after_conversation_already_finalized(client, db_session):
+    provider = FakeLLMProvider()
+    client.app.dependency_overrides[get_llm_provider] = lambda: provider
+
+    provider.queue_response('{"profile": "comprador", "confidence": 0.9}')
+    first = client.post("/api/chat/message", data={"message": "quero uma piscina"})
+    client.cookies.set("piscinow_session", first.cookies.get("piscinow_session"))
+
+    provider.queue_response(
+        '{"name": "Marina Duarte", "contact": "(19) 99999-0000", "region": "Valinhos", "intent": "alvenaria 6x3"}'
+    )
+    client.post(
+        "/api/chat/message",
+        data={"message": "Marina Duarte, (19) 99999-0000, em Valinhos, alvenaria 6x3"},
+    )
+
+    third = client.post("/api/chat/message", data={"message": "obrigado"})
+
+    assert third.status_code == 200
+    assert (
+        "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
+        in third.text
+    )

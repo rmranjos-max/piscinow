@@ -32,6 +32,7 @@ async def test_comprador_flow_without_referral_ends_waitlisted(db_session):
     )
 
     assert result.finalized is True
+    assert result.newly_finalized is True
     member = db_session.get(Member, conversation.member_id)
     assert member.status == MemberStatus.WAITLISTED
     assert member.profile_type == ProfileType.COMPRADOR
@@ -81,6 +82,7 @@ async def test_low_confidence_classification_asks_clarifying_question(db_session
     result = await orchestrator.handle_user_message(conversation, "oi", referred_by=None)
 
     assert result.finalized is False
+    assert result.newly_finalized is False
     assert conversation.profile_type_detected is None
 
 
@@ -138,6 +140,7 @@ async def test_second_message_after_finalization_does_not_duplicate_member(db_se
 
     # Verify the guard is working
     assert result.finalized is True
+    assert result.newly_finalized is False
     assert result.reply_text == "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
     # Verify no duplicate Member was created
     assert db_session.query(Member).count() == 1

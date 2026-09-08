@@ -31,6 +31,7 @@ CLARIFYING_QUESTION = (
 class TurnResult:
     reply_text: str
     finalized: bool
+    newly_finalized: bool
 
 
 class Orchestrator:
@@ -48,7 +49,7 @@ class Orchestrator:
 
         if conversation.member_id is not None:
             reply_text = "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
-            return TurnResult(reply_text=reply_text, finalized=True)
+            return TurnResult(reply_text=reply_text, finalized=True, newly_finalized=False)
 
         history = self._history_as_messages(conversation)
 
@@ -58,7 +59,7 @@ class Orchestrator:
                 self._session.add(
                     Message(conversation=conversation, role=MessageRole.AGENT, content=CLARIFYING_QUESTION)
                 )
-                return TurnResult(reply_text=CLARIFYING_QUESTION, finalized=False)
+                return TurnResult(reply_text=CLARIFYING_QUESTION, finalized=False, newly_finalized=False)
             conversation.profile_type_detected = classification.profile_type
 
         handler = HANDLER_CLASSES[conversation.profile_type_detected](self._llm, self._memory)
@@ -67,13 +68,13 @@ class Orchestrator:
         if handler.missing_fields(conversation.collected_fields):
             reply = await handler.reply(history, conversation.collected_fields)
             self._session.add(Message(conversation=conversation, role=MessageRole.AGENT, content=reply))
-            return TurnResult(reply_text=reply, finalized=False)
+            return TurnResult(reply_text=reply, finalized=False, newly_finalized=False)
 
         member = self._finalize_member(conversation, handler, referred_by=referred_by)
         reply = self._finalize_reply(member)
         self._session.add(Message(conversation=conversation, role=MessageRole.AGENT, content=reply))
         conversation.ended_at = conversation.ended_at or datetime.utcnow()
-        return TurnResult(reply_text=reply, finalized=True)
+        return TurnResult(reply_text=reply, finalized=True, newly_finalized=True)
 
     def _finalize_member(
         self, conversation: Conversation, handler: ConversationHandler, *, referred_by: Member | None

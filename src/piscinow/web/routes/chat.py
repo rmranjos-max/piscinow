@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form
+from fastapi import APIRouter, BackgroundTasks, Cookie, Depends, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from piscinow.agent.llm_provider import LLMProvider
 from piscinow.agent.memory_store import MemoryStore
 from piscinow.agent.orchestrator import Orchestrator
 from piscinow.models.conversation import Conversation
+from piscinow.rate_limit import chat_rate_limit_string, limiter
 from piscinow.referral import find_referrer
 from piscinow.web.deps import get_db, get_llm_provider
 
@@ -36,7 +37,9 @@ def _get_or_create_conversation(db: Session, session_id: str | None) -> tuple[Co
 
 
 @router.post("/api/chat/message")
+@limiter.limit(chat_rate_limit_string)
 async def send_message(
+    request: Request,
     background_tasks: BackgroundTasks,
     message: str = Form(...),
     db: Session = Depends(get_db),

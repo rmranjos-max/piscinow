@@ -1,10 +1,13 @@
+from decimal import Decimal, InvalidOperation
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from piscinow.loja_auth import login as do_login, logout as do_logout
+from piscinow.loja_auth import login as do_login, logout as do_logout, require_loja
 from piscinow.models.member import Member, ProfileType
+from piscinow.models.product import Product, ProductKind
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/loja")
@@ -89,3 +92,78 @@ async def login_submit(
 async def logout_submit(request: Request):
     do_logout(request)
     return RedirectResponse(url="/loja/login", status_code=303)
+
+
+@router.get("/produtos", response_class=HTMLResponse)
+async def produtos(
+    request: Request,
+    db: Session = Depends(get_db),
+    loja: Member = Depends(require_loja),
+):
+    templates = request.app.state.templates
+    items = list(
+        db.scalars(select(Product).where(Product.member_id == loja.id).order_by(Product.created_at.desc()))
+    )
+    return templates.TemplateResponse(
+        request, "loja_produtos.html", {"products": items, "error": None, "prefill": {}, "note": None}
+    )
+
+
+@router.post("/produtos")
+async def criar_produto(
+    request: Request,
+    kind: str = Form(...),
+    category: str = Form(...),
+    name: str = Form(...),
+    price: str = Form(...),
+    description: str = Form(""),
+    size_label: str = Form(""),
+    db: Session = Depends(get_db),
+    loja: Member = Depends(require_loja),
+):
+    templates = request.app.state.templates
+    error = None
+    parsed_price = None
+
+    if kind not in {k.value for k in ProductKind}:
+        error = "Selecione um tipo de produto valido."
+    elif not category.strip() or not name.strip():
+        error = "Preencha categoria e nome do produto."
+    else:
+        try:
+            parsed_price = Decimal(price.replace(",", "."))
+            if parsed_price <= 0:
+                error = "Informe um preco valido."
+        except (InvalidOperation, ValueError):
+            error = "Informe um preco valido."
+
+    if error:
+        items = list(
+            db.scalars(select(Product).where(Product.member_id == loja.id).order_by(Product.created_at.desc()))
+        )
+        prefill = {
+            "kind": kind,
+            "category": category,
+            "name": name,
+            "price": price,
+            "description": description,
+            "size_label": size_label,
+        }
+        return templates.TemplateResponse(
+            request,
+            "loja_produtos.html",
+            {"products": items, "error": error, "prefill": prefill, "note": None},
+            status_code=400,
+        )
+
+    product = Product(
+        member_id=loja.id,
+        kind=ProductKind(kind),
+        category=category.strip(),
+        name=name.strip(),
+        price=parsed_price,
+        description=description.strip() or None,
+        size_label=size_label.strip() or None,
+    )
+    db.add(product)
+    return RedirectResponse(url="/loja/produtos", status_code=303)

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/loja/produtos">Piscinow <span class="badge">Loja</span></a>
+      <form method="post" action="/loja/logout"><button class="mini-btn" type="submit">Sair</button></form>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap">
+      <h1>Meus produtos</h1>
+
+      <div class="teach-form">
+        <h2 style="font-size:1.1rem; margin-bottom:14px;">Cadastrar produto</h2>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        {% if note %}<p class="error">{{ note }}</p>{% endif %}
+
+        <details style="margin-bottom:16px;">
+          <summary class="eyebrow" style="cursor:pointer;">Atalho: descreva em texto livre</summary>
+          <form method="post" action="/loja/produtos/chat" style="margin-top:10px;">
+            <div class="field">
+              <textarea name="text" placeholder="Ex: piscina de fibra 6x3, R$18 mil"></textarea>
+            </div>
+            <button class="btn" type="submit">Extrair campos</button>
+          </form>
+        </details>
+
+        <form method="post" action="/loja/produtos">
+          <div class="field">
+            <label for="kind">Tipo</label>
+            <select id="kind" name="kind">
+              <option value="piscina" {% if prefill.get("kind") == "piscina" %}selected{% endif %}>Piscina</option>
+              <option value="equipamento" {% if prefill.get("kind") == "equipamento" %}selected{% endif %}>Equipamento</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="category">Categoria</label>
+            <input id="category" type="text" name="category" value="{{ prefill.get('category', '') }}" placeholder="fibra, vinil, alvenaria, filtragem...">
+          </div>
+          <div class="field">
+            <label for="name">Nome</label>
+            <input id="name" type="text" name="name" value="{{ prefill.get('name', '') }}">
+          </div>
+          <div class="field">
+            <label for="price">Preco (R$)</label>
+            <input id="price" type="text" name="price" value="{{ prefill.get('price', '') }}">
+          </div>
+          <div class="field">
+            <label for="size_label">Tamanho (opcional)</label>
+            <input id="size_label" type="text" name="size_label" value="{{ prefill.get('size_label', '') }}" placeholder="6x3m">
+          </div>
+          <div class="field">
+            <label for="description">Descricao (opcional)</label>
+            <textarea id="description" name="description">{{ prefill.get('description', '') }}</textarea>
+          </div>
+          <button class="btn accent" type="submit">Salvar produto</button>
+        </form>
+      </div>
+
+      {% if products %}
+      <table class="admin-table">
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Status</th><th>A&ccedil;&atilde;o</th></tr></thead>
+        <tbody>
+        {% for product in products %}
+          <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.category }}</td>
+            <td>R$ {{ product.price }}</td>
+            <td>{{ "Ativo" if product.active else "Inativo" }}</td>
+            <td>
+              <div class="row-actions">
+                <a class="mini-btn" href="/loja/produtos/{{ product.id }}/editar">Editar</a>
+                {% if product.active %}
+                <form method="post" action="/loja/produtos/{{ product.id }}/desativar">
+                  <button class="mini-btn" type="submit">Desativar</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-note">Nenhum produto cadastrado ainda.</p>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}

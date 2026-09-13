@@ -1,7 +1,6 @@
-import json
-import re
 from dataclasses import dataclass
 
+from piscinow.agent.json_extraction import parse_json_object
 from piscinow.agent.llm_provider import ChatMessage, LLMProvider
 from piscinow.agent.memory_store import MemoryStore
 from piscinow.models.member import ProfileType
@@ -64,10 +63,4 @@ class ConversationHandler:
 
     @staticmethod
     def _parse_json(raw: str) -> dict:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            return {}
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return {}
+        return parse_json_object(raw)

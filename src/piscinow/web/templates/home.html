@@ -1,18 +1,159 @@
 {% extends "base.html" %}
 {% block content %}
+<header class="site">
+  <div class="wrap nav-row">
+    <a class="brand" href="/">Piscinow <span class="badge">Clube</span></a>
+  </div>
+</header>
+
 <main>
-  <h1>Clube Piscinow</h1>
-  {% if referred_by_name %}
-    <p class="referral-banner">Voce foi indicado por {{ referred_by_name }} — entrada facilitada no Clube.</p>
-  {% endif %}
-  <p>Um clube de piscinas, nao uma loja.</p>
-  <section id="chat">
-    <div id="chat-body"></div>
-    <form id="chat-form">
-      <input id="chat-input" type="text" name="message" placeholder="Fale com o concierge...">
-      <button type="submit">Enviar</button>
-    </form>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Clube fechado &middot; Campinas e regi&atilde;o</p>
+        <h1>Um clube de piscinas, <em>n&atilde;o uma loja.</em></h1>
+        {% if referred_by_name %}
+          <p class="referral-banner">Voce foi indicado por {{ referred_by_name }} — entrada facilitada no Clube.</p>
+        {% endif %}
+        <p class="lede">A Piscinow n&atilde;o vende piscina. Ela conecta voc&ecirc; a lojas e instaladores homologados, organiza o contrato, retém o pagamento por etapa da obra e acompanha tudo at&eacute; o mergulho de inaugura&ccedil;&atilde;o.</p>
+        <div class="hero-ctas">
+          <a class="btn accent" href="#concierge">Falar com o concierge</a>
+        </div>
+      </div>
+      <figure class="plan-figure">
+        <svg viewBox="0 0 360 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planta esquem&aacute;tica de piscina retangular com cotas de 6 por 3 metros">
+          <rect x="60" y="40" width="240" height="150" rx="14" fill="none" stroke="var(--accent-strong)" stroke-width="2"/>
+          <rect x="60" y="40" width="240" height="150" rx="14" fill="var(--accent)" opacity="0.12"/>
+          <path d="M60 150 h-18 v40 h18" fill="none" stroke="var(--line-strong)" stroke-width="1.5"/>
+          <line x1="60" y1="24" x2="300" y2="24" stroke="var(--ink-soft)" stroke-width="1"/>
+          <line x1="60" y1="18" x2="60" y2="30" stroke="var(--ink-soft)" stroke-width="1"/>
+          <line x1="300" y1="18" x2="300" y2="30" stroke="var(--ink-soft)" stroke-width="1"/>
+          <text x="180" y="16" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-soft)">6,00 m</text>
+          <line x1="316" y1="40" x2="316" y2="190" stroke="var(--ink-soft)" stroke-width="1"/>
+          <line x1="310" y1="40" x2="322" y2="40" stroke="var(--ink-soft)" stroke-width="1"/>
+          <line x1="310" y1="190" x2="322" y2="190" stroke="var(--ink-soft)" stroke-width="1"/>
+          <text x="332" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-soft)" transform="rotate(90 332 118)">3,00 m</text>
+          <text x="180" y="120" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--accent-strong)">ALVENARIA &middot; 18 M&sup2;</text>
+        </svg>
+        <figcaption>
+          <span>Planta 01 / projeto do cliente</span>
+          <span>Etapa: configurador</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Da ideia ao mergulho</h2>
+        <span class="eyebrow">Fluxo do clube</span>
+      </div>
+      <div class="flow-strip">
+        <div class="flow-step"><span class="num">01</span><h3>Comprador entra</h3><p>Chega por indica&ccedil;&atilde;o ou fila de admiss&atilde;o e conta o que quer construir.</p></div>
+        <div class="flow-step"><span class="num">02</span><h3>Monta o projeto</h3><p>Define formato, tamanho e acabamento com a ajuda do concierge.</p></div>
+        <div class="flow-step"><span class="num">03</span><h3>Loja + instalador</h3><p>Piscinow indica o par homologado certo pra regi&atilde;o e o or&ccedil;amento.</p></div>
+        <div class="flow-step"><span class="num">04</span><h3>Pagamento protegido</h3><p>Cobran&ccedil;a &uacute;nica, dividida e retida por etapa conclu&iacute;da da obra.</p></div>
+        <div class="flow-step"><span class="num">05</span><h3>Obra acompanhada</h3><p>Terraplanagem, estrutura, revestimento e acabamento, com status vis&iacute;vel.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Quatro perfis, um clube</h2>
+        <span class="eyebrow">Quem participa</span>
+      </div>
+      <div class="legend">
+        <div class="legend-row">
+          <span class="legend-label">Comprador</span>
+          <p>Chega com uma ideia — vinil, fibra ou alvenaria — e sai com projeto or&ccedil;ado, loja e instalador homologados, pagamento protegido numa cobran&ccedil;a s&oacute;.</p>
+        </div>
+        <div class="legend-row">
+          <span class="legend-label">Loja</span>
+          <p>Cadastra o cat&aacute;logo — piscinas, filtragem, aquecimento, automa&ccedil;&atilde;o — e recebe pedidos j&aacute; qualificados de compradores do Clube na regi&atilde;o.</p>
+        </div>
+        <div class="legend-row">
+          <span class="legend-label">Prestador de servi&ccedil;o</span>
+          <p>Instalador homologado executa a obra — terraplanagem, estrutura, revestimento, acabamento — e recebe repasse por etapa conclu&iacute;da.</p>
+        </div>
+        <div class="legend-row">
+          <span class="legend-label">Embaixador</span>
+          <p>Indica pessoas de confian&ccedil;a pelo pr&oacute;prio link. Cada indica&ccedil;&atilde;o entra direto no Clube — sem fila — e vira comiss&atilde;o quando o projeto sai do papel.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="concierge">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>O concierge do Clube</h2>
+        <span class="eyebrow">Identifica seu perfil e conduz o fluxo certo</span>
+      </div>
+      <div class="chat-panel">
+        <div class="chat-top">
+          <span class="who">Concierge Piscinow</span>
+        </div>
+        <div id="chat-body"></div>
+        <form id="chat-form">
+          <input id="chat-input" type="text" name="message" placeholder="Fale com o concierge..." autocomplete="off">
+          <button class="btn accent" type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Perguntas frequentes</h2>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">A Piscinow vende a piscina?</p>
+        <p class="faq-a">N&atilde;o. A Piscinow conecta voc&ecirc; &agrave;s lojas e instaladores homologados, organiza o contrato, o pagamento protegido e o acompanhamento da obra.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Como funciona o pagamento?</p>
+        <p class="faq-a">A cobran&ccedil;a &eacute; &uacute;nica e o valor &eacute; dividido automaticamente entre a loja e o instalador. Parte fica retida at&eacute; a conclus&atilde;o das etapas acordadas.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Preciso de convite para entrar?</p>
+        <p class="faq-a">O Clube &eacute; por indica&ccedil;&atilde;o. Se voc&ecirc; n&atilde;o tem um link de anfitri&atilde;o, pode se cadastrar e entrar na fila de admiss&atilde;o.</p>
+      </div>
+      <div class="faq-item">
+        <p class="faq-q">Atendem em qual regi&atilde;o?</p>
+        <p class="faq-a">A opera&ccedil;&atilde;o come&ccedil;a em Campinas e regi&atilde;o metropolitana, com expans&atilde;o progressiva para o interior de S&atilde;o Paulo.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" style="border-bottom: none;">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Cobertura atual</h2>
+        <span class="eyebrow">Fase 1</span>
+      </div>
+      <div class="coverage-list">
+        <span class="coverage-chip now">Campinas</span>
+        <span class="coverage-chip now">Valinhos</span>
+        <span class="coverage-chip now">Vinhedo</span>
+        <span class="coverage-chip now">Indaiatuba</span>
+        <span class="coverage-chip now">Paulínia</span>
+        <span class="coverage-chip now">Hortolândia</span>
+        <span class="coverage-chip now">Sumaré</span>
+      </div>
+    </div>
   </section>
 </main>
+
+<footer class="site">
+  <div class="wrap" style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:16px;">
+    <span class="brand">Piscinow <span class="badge">Clube</span></span>
+    <span>&copy; Clube Piscinow</span>
+  </div>
+</footer>
+
 <script src="/static/js/chat.js"></script>
 {% endblock %}

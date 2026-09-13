@@ -1,26 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
-<main>
-  <h1>Fila de admissao</h1>
-  <table>
-    <thead><tr><th>Nome</th><th>Perfil</th><th>Regiao</th><th>Acao</th></tr></thead>
-    <tbody>
-    {% for member in members %}
-      <tr>
-        <td>{{ member.name }}</td>
-        <td>{{ member.profile_type.value }}</td>
-        <td>{{ member.region or member.profile_details.get("region", "-") }}</td>
-        <td>
-          <form method="post" action="/admin/fila/{{ member.id }}/aprovar" style="display:inline">
-            <button type="submit">Aprovar</button>
-          </form>
-          <form method="post" action="/admin/fila/{{ member.id }}/recusar" style="display:inline">
-            <button type="submit">Recusar</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</main>
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
+      <nav class="admin-nav">
+        <a href="/admin/fila">Fila de admiss&atilde;o</a>
+        <a href="/admin/correcoes">Ensinar o concierge</a>
+      </nav>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap">
+      <h1>Fila de admiss&atilde;o</h1>
+      {% if members %}
+      <table class="admin-table">
+        <thead><tr><th>Nome</th><th>Perfil</th><th>Regi&atilde;o</th><th>A&ccedil;&atilde;o</th></tr></thead>
+        <tbody>
+        {% for member in members %}
+          <tr>
+            <td>{{ member.name }}</td>
+            <td>{{ member.profile_type.value }}</td>
+            <td>{{ member.region or member.profile_details.get("region", "-") }}</td>
+            <td>
+              <div class="row-actions">
+                <form method="post" action="/admin/fila/{{ member.id }}/aprovar">
+                  <button class="mini-btn accent" type="submit">Aprovar</button>
+                </form>
+                <form method="post" action="/admin/fila/{{ member.id }}/recusar">
+                  <button class="mini-btn" type="submit">Recusar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-note">Ningu&eacute;m na fila no momento.</p>
+      {% endif %}
+    </div>
+  </main>
+</div>
 {% endblock %}

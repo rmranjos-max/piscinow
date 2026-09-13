@@ -1,32 +1,60 @@
 {% extends "base.html" %}
 {% block content %}
-<main>
-  <h1>Ensinar o concierge</h1>
-  <form method="post" action="/admin/correcoes/ensinar">
-    <select name="profile_type">
-      <option value="geral">Geral</option>
-      <option value="comprador">Comprador</option>
-      <option value="loja">Loja</option>
-      <option value="prestador">Prestador</option>
-      <option value="embaixador">Embaixador</option>
-    </select>
-    <textarea name="content" placeholder="Escreva o aprendizado em uma frase curta"></textarea>
-    <button type="submit">Salvar</button>
-  </form>
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
+      <nav class="admin-nav">
+        <a href="/admin/fila">Fila de admiss&atilde;o</a>
+        <a href="/admin/correcoes">Ensinar o concierge</a>
+      </nav>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap">
+      <h1>Ensinar o concierge</h1>
 
-  <h2>Conversas recentes</h2>
-  <ul>
-  {% for conversation in conversations %}
-    <li>
-      {{ conversation.profile_type_detected.value if conversation.profile_type_detected else "nao identificado" }}
-      — {{ conversation.started_at }}
-      <ul>
-      {% for message in conversation.messages %}
-        <li><strong>{{ message.role.value }}:</strong> {{ message.content }}</li>
-      {% endfor %}
-      </ul>
-    </li>
-  {% endfor %}
-  </ul>
-</main>
+      <form class="teach-form" method="post" action="/admin/correcoes/ensinar">
+        <div class="field">
+          <label for="profile_type">Perfil</label>
+          <select id="profile_type" name="profile_type">
+            <option value="geral">Geral</option>
+            <option value="comprador">Comprador</option>
+            <option value="loja">Loja</option>
+            <option value="prestador">Prestador</option>
+            <option value="embaixador">Embaixador</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="content">Aprendizado</label>
+          <textarea id="content" name="content" placeholder="Escreva o aprendizado em uma frase curta"></textarea>
+        </div>
+        <button class="btn accent" type="submit">Salvar</button>
+      </form>
+
+      <div class="section-head">
+        <h2>Conversas recentes</h2>
+      </div>
+      {% if conversations %}
+      <div class="convo-list">
+        {% for conversation in conversations %}
+        <div class="convo-card">
+          <p class="convo-meta">
+            {{ conversation.profile_type_detected.value if conversation.profile_type_detected else "nao identificado" }}
+            &middot; {{ conversation.started_at }}
+          </p>
+          <ul>
+          {% for message in conversation.messages %}
+            <li><strong>{{ message.role.value }}:</strong> {{ message.content }}</li>
+          {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="empty-note">Nenhuma conversa registrada ainda.</p>
+      {% endif %}
+    </div>
+  </main>
+</div>
 {% endblock %}

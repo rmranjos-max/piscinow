@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -7,6 +8,12 @@ from piscinow.models.member import Member, MemberStatus, ProfileType
 
 def make_member(**kwargs):
     defaults = dict(profile_type=ProfileType.COMPRADOR, name="Teste")
+    defaults.update(kwargs)
+    return Member(**defaults)
+
+
+def make_loja_member(**kwargs):
+    defaults = dict(profile_type=ProfileType.LOJA, name="Studio Fibra Sul")
     defaults.update(kwargs)
     return Member(**defaults)
 
@@ -70,3 +77,61 @@ def test_member_persists_and_reloads(db_session):
 
     assert reloaded.name == "Studio Fibra Sul"
     assert reloaded.profile_details["cnpj"] == "12.345.678/0001-90"
+
+
+def test_generate_set_password_token_sets_token_and_future_expiry():
+    member = make_loja_member()
+    token = member.generate_set_password_token()
+    assert member.set_password_token == token
+    assert member.set_password_token_expires_at > datetime.now(timezone.utc)
+
+
+def test_consume_set_password_token_accepts_valid_token():
+    member = make_loja_member()
+    token = member.generate_set_password_token()
+    assert member.consume_set_password_token(token) is True
+
+
+def test_consume_set_password_token_rejects_wrong_token():
+    member = make_loja_member()
+    member.generate_set_password_token()
+    assert member.consume_set_password_token("token-errado") is False
+
+
+def test_consume_set_password_token_rejects_expired_token():
+    member = make_loja_member()
+    token = member.generate_set_password_token()
+    member.set_password_token_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    assert member.consume_set_password_token(token) is False
+
+
+def test_consume_set_password_token_rejects_when_none_set():
+    member = make_loja_member()
+    assert member.consume_set_password_token("qualquer-coisa") is False
+
+
+def test_set_password_hashes_and_clears_token():
+    member = make_loja_member()
+    member.generate_set_password_token()
+    member.set_password("senha-forte-123")
+    assert member.password_hash is not None
+    assert member.password_hash != "senha-forte-123"
+    assert member.set_password_token is None
+    assert member.set_password_token_expires_at is None
+
+
+def test_verify_password_accepts_correct_password():
+    member = make_loja_member()
+    member.set_password("senha-forte-123")
+    assert member.verify_password("senha-forte-123") is True
+
+
+def test_verify_password_rejects_wrong_password():
+    member = make_loja_member()
+    member.set_password("senha-forte-123")
+    assert member.verify_password("errada") is False
+
+
+def test_verify_password_returns_false_when_no_password_set():
+    member = make_loja_member()
+    assert member.verify_password("qualquer-coisa") is False

@@ -1,12 +1,18 @@
 import enum
+import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from piscinow.db import Base
+
+
+_hasher = PasswordHasher()
 
 
 class ProfileType(str, enum.Enum):
@@ -45,6 +51,9 @@ class Member(Base):
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    set_password_token: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    set_password_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __init__(self, **kwargs):
         if 'id' not in kwargs:
@@ -78,3 +87,31 @@ class Member(Base):
         self.status = MemberStatus.APPROVED
         self.approved_by = "referral"
         self.approved_at = datetime.now(timezone.utc)
+
+    def generate_set_password_token(self) -> str:
+        token = secrets.token_urlsafe(32)
+        self.set_password_token = token
+        self.set_password_token_expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        return token
+
+    def consume_set_password_token(self, token: str) -> bool:
+        if not self.set_password_token or not self.set_password_token_expires_at:
+            return False
+        if self.set_password_token != token:
+            return False
+        if datetime.now(timezone.utc) > self.set_password_token_expires_at:
+            return False
+        return True
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = _hasher.hash(password)
+        self.set_password_token = None
+        self.set_password_token_expires_at = None
+
+    def verify_password(self, password: str) -> bool:
+        if not self.password_hash:
+            return False
+        try:
+            return _hasher.verify(self.password_hash, password)
+        except VerifyMismatchError:
+            return False

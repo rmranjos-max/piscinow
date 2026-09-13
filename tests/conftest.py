@@ -11,6 +11,7 @@ import piscinow.models.member  # noqa: E402,F401
 import piscinow.models.conversation  # noqa: E402,F401
 import piscinow.models.memory  # noqa: E402,F401
 import piscinow.models.admin  # noqa: E402,F401
+import piscinow.models.product  # noqa: E402,F401
 
 
 @pytest.fixture(scope="session")

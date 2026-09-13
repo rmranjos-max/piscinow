@@ -7,6 +7,7 @@ from piscinow.agent.memory_store import MemoryStore
 from piscinow.auth import login as do_login
 from piscinow.auth import logout as do_logout
 from piscinow.auth import require_admin
+from piscinow.config import get_settings
 from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import Conversation
 from piscinow.models.member import Member, MemberStatus, ProfileType
@@ -61,6 +62,8 @@ async def aprovar(
     member = db.get(Member, member_id)
     if member is not None:
         member.approve(approved_by=admin.email)
+        if member.profile_type == ProfileType.LOJA:
+            member.generate_set_password_token()
     return RedirectResponse(url="/admin/fila", status_code=303)
 
 
@@ -104,3 +107,19 @@ async def ensinar(
         created_by=admin.email,
     )
     return RedirectResponse(url="/admin/correcoes", status_code=303)
+
+
+@router.get("/lojas", response_class=HTMLResponse)
+async def lojas(
+    request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)
+):
+    templates = request.app.state.templates
+    items = list(
+        db.scalars(
+            select(Member)
+            .where(Member.profile_type == ProfileType.LOJA, Member.status == MemberStatus.APPROVED)
+            .order_by(Member.approved_at.desc())
+        )
+    )
+    base_url = get_settings().public_base_url
+    return templates.TemplateResponse(request, "admin_lojas.html", {"members": items, "base_url": base_url})

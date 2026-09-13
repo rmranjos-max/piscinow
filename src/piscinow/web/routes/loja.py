@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from piscinow.loja_auth import login as do_login, logout as do_logout
 from piscinow.models.member import Member, ProfileType
 from piscinow.web.deps import get_db
 
@@ -60,4 +61,31 @@ async def definir_senha_submit(
         )
     member.email = email
     member.set_password(password)
+    return RedirectResponse(url="/loja/login", status_code=303)
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    templates = request.app.state.templates
+    return templates.TemplateResponse(request, "loja_login.html", {"error": None})
+
+
+@router.post("/login")
+async def login_submit(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    if do_login(request, db, email, password):
+        return RedirectResponse(url="/loja/produtos", status_code=303)
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request, "loja_login.html", {"error": "E-mail ou senha invalidos"}, status_code=401
+    )
+
+
+@router.post("/logout")
+async def logout_submit(request: Request):
+    do_logout(request)
     return RedirectResponse(url="/loja/login", status_code=303)

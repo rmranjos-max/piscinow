@@ -1,6 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -166,4 +166,65 @@ async def criar_produto(
         size_label=size_label.strip() or None,
     )
     db.add(product)
+    return RedirectResponse(url="/loja/produtos", status_code=303)
+
+
+@router.get("/produtos/{product_id}/editar", response_class=HTMLResponse)
+async def editar_produto_form(
+    product_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    loja: Member = Depends(require_loja),
+):
+    product = db.get(Product, product_id)
+    if product is None or product.member_id != loja.id:
+        raise HTTPException(status_code=404)
+    templates = request.app.state.templates
+    return templates.TemplateResponse(request, "loja_produto_editar.html", {"product": product, "error": None})
+
+
+@router.post("/produtos/{product_id}/editar")
+async def editar_produto_submit(
+    product_id: str,
+    request: Request,
+    kind: str = Form(...),
+    category: str = Form(...),
+    name: str = Form(...),
+    price: str = Form(...),
+    description: str = Form(""),
+    size_label: str = Form(""),
+    db: Session = Depends(get_db),
+    loja: Member = Depends(require_loja),
+):
+    product = db.get(Product, product_id)
+    if product is None or product.member_id != loja.id:
+        raise HTTPException(status_code=404)
+
+    templates = request.app.state.templates
+    error = None
+    parsed_price = None
+
+    if kind not in {k.value for k in ProductKind}:
+        error = "Selecione um tipo de produto valido."
+    elif not category.strip() or not name.strip():
+        error = "Preencha categoria e nome do produto."
+    else:
+        try:
+            parsed_price = Decimal(price.replace(",", "."))
+            if parsed_price <= 0:
+                error = "Informe um preco valido."
+        except (InvalidOperation, ValueError):
+            error = "Informe um preco valido."
+
+    if error:
+        return templates.TemplateResponse(
+            request, "loja_produto_editar.html", {"product": product, "error": error}, status_code=400
+        )
+
+    product.kind = ProductKind(kind)
+    product.category = category.strip()
+    product.name = name.strip()
+    product.price = parsed_price
+    product.description = description.strip() or None
+    product.size_label = size_label.strip() or None
     return RedirectResponse(url="/loja/produtos", status_code=303)

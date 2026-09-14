@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/loja/produtos">Piscinow <span class="badge">Loja</span></a>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap narrow">
+      <h1>Editar produto</h1>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <form method="post" action="/loja/produtos/{{ product.id }}/editar">
+        <div class="field">
+          <label for="kind">Tipo</label>
+          <select id="kind" name="kind">
+            <option value="piscina" {% if product.kind.value == "piscina" %}selected{% endif %}>Piscina</option>
+            <option value="equipamento" {% if product.kind.value == "equipamento" %}selected{% endif %}>Equipamento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Categoria</label>
+          <input id="category" type="text" name="category" value="{{ product.category }}">
+        </div>
+        <div class="field">
+          <label for="name">Nome</label>
+          <input id="name" type="text" name="name" value="{{ product.name }}">
+        </div>
+        <div class="field">
+          <label for="price">Preco (R$)</label>
+          <input id="price" type="text" name="price" value="{{ product.price }}">
+        </div>
+        <div class="field">
+          <label for="size_label">Tamanho (opcional)</label>
+          <input id="size_label" type="text" name="size_label" value="{{ product.size_label or '' }}">
+        </div>
+        <div class="field">
+          <label for="description">Descricao (opcional)</label>
+          <textarea id="description" name="description">{{ product.description or '' }}</textarea>
+        </div>
+        <button class="btn accent" type="submit">Salvar altera&ccedil;&otilde;es</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

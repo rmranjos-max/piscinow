@@ -228,3 +228,16 @@ async def editar_produto_submit(
     product.description = description.strip() or None
     product.size_label = size_label.strip() or None
     return RedirectResponse(url="/loja/produtos", status_code=303)
+
+
+@router.post("/produtos/{product_id}/desativar")
+async def desativar_produto(
+    product_id: str,
+    db: Session = Depends(get_db),
+    loja: Member = Depends(require_loja),
+):
+    product = db.get(Product, product_id)
+    if product is None or product.member_id != loja.id:
+        raise HTTPException(status_code=404)
+    product.active = False
+    return RedirectResponse(url="/loja/produtos", status_code=303)

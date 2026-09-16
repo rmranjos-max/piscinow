@@ -5,7 +5,7 @@
     <div class="login-card">
       <h1>Definir senha</h1>
       {% if invalid %}
-        <p class="error">Link invalido ou expirado. Peca um novo a equipe Piscinow.</p>
+        <p class="error">Link inv&aacute;lido ou expirado. Pe&ccedil;a um novo &agrave; equipe Piscinow.</p>
       {% else %}
         {% if error %}<p class="error">{{ error }}</p>{% endif %}
         <form method="post" action="/loja/definir-senha/{{ token }}">

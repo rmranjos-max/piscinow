@@ -38,7 +38,7 @@ class Member(Base):
         SAEnum(MemberStatus, name="member_status"), default=MemberStatus.PENDING
     )
     name: Mapped[str] = mapped_column(String(200))
-    email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     region: Mapped[str | None] = mapped_column(String(100), nullable=True)
     profile_details: Mapped[dict] = mapped_column(JSONB, default=dict)

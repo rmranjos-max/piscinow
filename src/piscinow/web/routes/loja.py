@@ -8,17 +8,44 @@ from sqlalchemy.orm import Session
 from piscinow.agent.llm_provider import LLMProvider
 from piscinow.agent.product_extractor import extract_product_fields
 from piscinow.loja_auth import login as do_login, logout as do_logout, require_loja
-from piscinow.models.member import Member, ProfileType
+from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.product import Product, ProductKind
+from piscinow.rate_limit import chat_rate_limit_string, limiter, loja_login_rate_limit_string
 from piscinow.web.deps import get_db, get_llm_provider
 
 router = APIRouter(prefix="/loja")
+
+_MAX_PRICE = Decimal("99999999.99")
+
+
+def _validate_product_form(
+    kind: str, category: str, name: str, price: str, size_label: str
+) -> tuple[str | None, Decimal | None]:
+    if kind not in {k.value for k in ProductKind}:
+        return "Selecione um tipo de produto valido.", None
+    if not category.strip() or not name.strip():
+        return "Preencha categoria e nome do produto.", None
+    if len(category.strip()) > 100 or len(name.strip()) > 200 or len(size_label.strip()) > 50:
+        return "Categoria, nome ou tamanho do produto excede o limite permitido.", None
+    try:
+        parsed_price = Decimal(price.replace(",", "."))
+    except (InvalidOperation, ValueError):
+        return "Informe um preco valido.", None
+    if not parsed_price.is_finite() or parsed_price <= 0 or parsed_price > _MAX_PRICE:
+        return "Informe um preco valido.", None
+    return None, parsed_price
 
 
 @router.get("/definir-senha/{token}", response_class=HTMLResponse)
 async def definir_senha_form(token: str, request: Request, db: Session = Depends(get_db)):
     templates = request.app.state.templates
-    member = db.scalar(select(Member).where(Member.set_password_token == token))
+    member = db.scalar(
+        select(Member).where(
+            Member.set_password_token == token,
+            Member.profile_type == ProfileType.LOJA,
+            Member.status == MemberStatus.APPROVED,
+        )
+    )
     if member is None or not member.consume_set_password_token(token):
         return templates.TemplateResponse(
             request, "loja_definir_senha.html", {"token": token, "invalid": True, "error": None}, status_code=400
@@ -38,7 +65,13 @@ async def definir_senha_submit(
     db: Session = Depends(get_db),
 ):
     templates = request.app.state.templates
-    member = db.scalar(select(Member).where(Member.set_password_token == token))
+    member = db.scalar(
+        select(Member).where(
+            Member.set_password_token == token,
+            Member.profile_type == ProfileType.LOJA,
+            Member.status == MemberStatus.APPROVED,
+        )
+    )
     if member is None or not member.consume_set_password_token(token):
         return templates.TemplateResponse(
             request, "loja_definir_senha.html", {"token": token, "invalid": True, "error": None}, status_code=400
@@ -50,9 +83,10 @@ async def definir_senha_submit(
             {"token": token, "invalid": False, "error": "As senhas nao coincidem."},
             status_code=400,
         )
+    normalized_email = email.strip().lower()
     existing = db.scalar(
         select(Member).where(
-            Member.email == email,
+            Member.email == normalized_email,
             Member.profile_type == ProfileType.LOJA,
             Member.id != member.id,
         )
@@ -64,7 +98,7 @@ async def definir_senha_submit(
             {"token": token, "invalid": False, "error": "Esse e-mail ja esta em uso por outra loja."},
             status_code=400,
         )
-    member.email = email
+    member.email = normalized_email
     member.set_password(password)
     return RedirectResponse(url="/loja/login", status_code=303)
 
@@ -76,6 +110,7 @@ async def login_form(request: Request):
 
 
 @router.post("/login")
+@limiter.limit(loja_login_rate_limit_string)
 async def login_submit(
     request: Request,
     email: str = Form(...),
@@ -124,20 +159,7 @@ async def criar_produto(
     loja: Member = Depends(require_loja),
 ):
     templates = request.app.state.templates
-    error = None
-    parsed_price = None
-
-    if kind not in {k.value for k in ProductKind}:
-        error = "Selecione um tipo de produto valido."
-    elif not category.strip() or not name.strip():
-        error = "Preencha categoria e nome do produto."
-    else:
-        try:
-            parsed_price = Decimal(price.replace(",", "."))
-            if parsed_price <= 0:
-                error = "Informe um preco valido."
-        except (InvalidOperation, ValueError):
-            error = "Informe um preco valido."
+    error, parsed_price = _validate_product_form(kind, category, name, price, size_label)
 
     if error:
         items = list(
@@ -203,20 +225,7 @@ async def editar_produto_submit(
         raise HTTPException(status_code=404)
 
     templates = request.app.state.templates
-    error = None
-    parsed_price = None
-
-    if kind not in {k.value for k in ProductKind}:
-        error = "Selecione um tipo de produto valido."
-    elif not category.strip() or not name.strip():
-        error = "Preencha categoria e nome do produto."
-    else:
-        try:
-            parsed_price = Decimal(price.replace(",", "."))
-            if parsed_price <= 0:
-                error = "Informe um preco valido."
-        except (InvalidOperation, ValueError):
-            error = "Informe um preco valido."
+    error, parsed_price = _validate_product_form(kind, category, name, price, size_label)
 
     if error:
         return templates.TemplateResponse(
@@ -233,6 +242,7 @@ async def editar_produto_submit(
 
 
 @router.post("/produtos/chat")
+@limiter.limit(chat_rate_limit_string)
 async def produtos_chat(
     request: Request,
     text: str = Form(...),

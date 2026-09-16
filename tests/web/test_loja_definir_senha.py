@@ -60,3 +60,60 @@ def test_definir_senha_rejects_duplicate_email(client, db_session):
 
     assert response.status_code == 400
     assert "ja esta em uso" in response.text
+
+
+def test_definir_senha_rejects_duplicate_email_case_insensitive(client, db_session):
+    outra = Member(
+        profile_type=ProfileType.LOJA, name="Outra Loja", status=MemberStatus.APPROVED, email="loja@example.com"
+    )
+    db_session.add(outra)
+    member = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul", status=MemberStatus.APPROVED)
+    token = member.generate_set_password_token()
+    db_session.add(member)
+    db_session.flush()
+
+    response = client.post(
+        f"/loja/definir-senha/{token}",
+        data={"email": "Loja@Example.com", "password": "senha-forte-123", "password_confirm": "senha-forte-123"},
+    )
+
+    assert response.status_code == 400
+    assert "ja esta em uso" in response.text
+
+
+def test_definir_senha_rejects_token_for_non_approved_member(client, db_session):
+    member = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul", status=MemberStatus.WAITLISTED)
+    token = member.generate_set_password_token()
+    db_session.add(member)
+    db_session.flush()
+
+    get_response = client.get(f"/loja/definir-senha/{token}")
+    assert get_response.status_code == 400
+
+    post_response = client.post(
+        f"/loja/definir-senha/{token}",
+        data={"email": "loja@example.com", "password": "senha-forte-123", "password_confirm": "senha-forte-123"},
+    )
+    assert post_response.status_code == 400
+    db_session.refresh(member)
+    assert member.password_hash is None
+    assert member.email is None
+
+
+def test_definir_senha_rejects_token_for_non_loja_profile(client, db_session):
+    member = Member(profile_type=ProfileType.COMPRADOR, name="Marina", status=MemberStatus.APPROVED)
+    token = member.generate_set_password_token()
+    db_session.add(member)
+    db_session.flush()
+
+    get_response = client.get(f"/loja/definir-senha/{token}")
+    assert get_response.status_code == 400
+
+    post_response = client.post(
+        f"/loja/definir-senha/{token}",
+        data={"email": "marina@example.com", "password": "senha-forte-123", "password_confirm": "senha-forte-123"},
+    )
+    assert post_response.status_code == 400
+    db_session.refresh(member)
+    assert member.password_hash is None
+    assert member.email is None

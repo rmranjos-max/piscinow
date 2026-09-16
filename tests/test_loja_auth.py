@@ -1,7 +1,3 @@
-import pytest
-from fastapi import HTTPException
-from starlette.requests import Request
-
 from piscinow.loja_auth import LOJA_SESSION_KEY, login, logout
 
 
@@ -62,6 +58,7 @@ def test_login_fails_for_non_loja_profile(db_session):
     result = login(request, db_session, "marina@example.com", "senha-forte-123")
 
     assert result is False
+    assert LOJA_SESSION_KEY not in request.session
 
 
 def test_logout_removes_session_key():

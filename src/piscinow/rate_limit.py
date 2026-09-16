@@ -13,3 +13,7 @@ def chat_rate_limit_string() -> str:
 
 def admin_login_rate_limit_string() -> str:
     return "5/minute"
+
+
+def loja_login_rate_limit_string() -> str:
+    return "5/minute"

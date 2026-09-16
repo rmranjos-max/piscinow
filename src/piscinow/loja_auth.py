@@ -11,7 +11,7 @@ LOJA_SESSION_KEY = "loja_member_id"
 def login(request: Request, db: Session, email: str, password: str) -> bool:
     member = db.scalar(
         select(Member).where(
-            Member.email == email,
+            Member.email == email.strip().lower(),
             Member.profile_type == ProfileType.LOJA,
             Member.status == MemberStatus.APPROVED,
         )

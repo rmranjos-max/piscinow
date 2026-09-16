@@ -43,7 +43,7 @@
             <input id="name" type="text" name="name" value="{{ prefill.get('name', '') }}">
           </div>
           <div class="field">
-            <label for="price">Preco (R$)</label>
+            <label for="price">Pre&ccedil;o (R$)</label>
             <input id="price" type="text" name="price" value="{{ prefill.get('price', '') }}">
           </div>
           <div class="field">
@@ -51,7 +51,7 @@
             <input id="size_label" type="text" name="size_label" value="{{ prefill.get('size_label', '') }}" placeholder="6x3m">
           </div>
           <div class="field">
-            <label for="description">Descricao (opcional)</label>
+            <label for="description">Descri&ccedil;&atilde;o (opcional)</label>
             <textarea id="description" name="description">{{ prefill.get('description', '') }}</textarea>
           </div>
           <button class="btn accent" type="submit">Salvar produto</button>
@@ -60,7 +60,7 @@
 
       {% if products %}
       <table class="admin-table">
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Status</th><th>A&ccedil;&atilde;o</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Pre&ccedil;o</th><th>Status</th><th>A&ccedil;&atilde;o</th></tr></thead>
         <tbody>
         {% for product in products %}
           <tr>

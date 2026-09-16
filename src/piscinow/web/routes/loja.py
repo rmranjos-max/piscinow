@@ -5,10 +5,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from piscinow.agent.llm_provider import LLMProvider
+from piscinow.agent.product_extractor import extract_product_fields
 from piscinow.loja_auth import login as do_login, logout as do_logout, require_loja
 from piscinow.models.member import Member, ProfileType
 from piscinow.models.product import Product, ProductKind
-from piscinow.web.deps import get_db
+from piscinow.web.deps import get_db, get_llm_provider
 
 router = APIRouter(prefix="/loja")
 
@@ -228,6 +230,27 @@ async def editar_produto_submit(
     product.description = description.strip() or None
     product.size_label = size_label.strip() or None
     return RedirectResponse(url="/loja/produtos", status_code=303)
+
+
+@router.post("/produtos/chat")
+async def produtos_chat(
+    request: Request,
+    text: str = Form(...),
+    db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+    loja: Member = Depends(require_loja),
+):
+    templates = request.app.state.templates
+    prefill = await extract_product_fields(llm, text)
+    items = list(
+        db.scalars(select(Product).where(Product.member_id == loja.id).order_by(Product.created_at.desc()))
+    )
+    note = None
+    if not any(prefill.values()):
+        note = "Nao consegui entender, preencha manualmente."
+    return templates.TemplateResponse(
+        request, "loja_produtos.html", {"products": items, "error": None, "prefill": prefill, "note": note}
+    )
 
 
 @router.post("/produtos/{product_id}/desativar")

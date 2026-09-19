@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
+      <nav class="admin-nav">
+        <a href="/admin/fila">Fila de admiss&atilde;o</a>
+        <a href="/admin/lojas">Lojas</a>
+        <a href="/admin/prestadores">Prestadores</a>
+        <a href="/admin/correcoes">Ensinar o concierge</a>
+      </nav>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap">
+      <h1>Prestadores aprovados</h1>
+      {% if members %}
+      <table class="admin-table">
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for member in members %}
+          <tr>
+            <td>{{ member.name }}</td>
+            <td>{{ member.email or "-" }}</td>
+            <td>
+              {% if member.password_hash %}
+                Ativo
+              {% elif member.set_password_token %}
+                Aguardando defini&ccedil;&atilde;o de senha —
+                <span class="mono">{{ base_url }}/prestador/definir-senha/{{ member.set_password_token }}</span>
+              {% else %}
+                Sem acesso gerado
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-note">Nenhum prestador aprovado ainda.</p>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}

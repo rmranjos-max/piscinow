@@ -5,11 +5,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from piscinow.agent.llm_provider import LLMProvider
+from piscinow.agent.service_extractor import extract_service_fields
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.service import Service, ServiceKind
 from piscinow.prestador_auth import login as do_login, logout as do_logout, require_prestador
-from piscinow.rate_limit import limiter, prestador_login_rate_limit_string
-from piscinow.web.deps import get_db
+from piscinow.rate_limit import limiter, prestador_login_rate_limit_string, chat_rate_limit_string
+from piscinow.web.deps import get_db, get_llm_provider
 
 router = APIRouter(prefix="/prestador")
 
@@ -269,3 +271,25 @@ async def desativar_servico(
         raise HTTPException(status_code=404)
     service.active = False
     return RedirectResponse(url="/prestador/servicos", status_code=303)
+
+
+@router.post("/servicos/chat")
+@limiter.limit(chat_rate_limit_string)
+async def servicos_chat(
+    request: Request,
+    text: str = Form(...),
+    db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+    prestador: Member = Depends(require_prestador),
+):
+    templates = request.app.state.templates
+    prefill = await extract_service_fields(llm, text)
+    items = list(
+        db.scalars(select(Service).where(Service.member_id == prestador.id).order_by(Service.created_at.desc()))
+    )
+    note = None
+    if not any(prefill.values()):
+        note = "Nao consegui entender, preencha manualmente."
+    return templates.TemplateResponse(
+        request, "prestador_servicos.html", {"services": items, "error": None, "prefill": prefill, "note": note}
+    )

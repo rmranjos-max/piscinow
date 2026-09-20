@@ -4,6 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from piscinow.models.member import Member, MemberStatus, ProfileType
+from piscinow.prestador_auth import login as do_login, logout as do_logout
+from piscinow.rate_limit import limiter, prestador_login_rate_limit_string
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/prestador")
@@ -73,4 +75,32 @@ async def definir_senha_submit(
         )
     member.email = normalized_email
     member.set_password(password)
+    return RedirectResponse(url="/prestador/login", status_code=303)
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    templates = request.app.state.templates
+    return templates.TemplateResponse(request, "prestador_login.html", {"error": None})
+
+
+@router.post("/login")
+@limiter.limit(prestador_login_rate_limit_string)
+async def login_submit(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    if do_login(request, db, email, password):
+        return RedirectResponse(url="/prestador/servicos", status_code=303)
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request, "prestador_login.html", {"error": "E-mail ou senha invalidos"}, status_code=401
+    )
+
+
+@router.post("/logout")
+async def logout_submit(request: Request):
+    do_logout(request)
     return RedirectResponse(url="/prestador/login", status_code=303)

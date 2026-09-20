@@ -17,3 +17,7 @@ def admin_login_rate_limit_string() -> str:
 
 def loja_login_rate_limit_string() -> str:
     return "5/minute"
+
+
+def prestador_login_rate_limit_string() -> str:
+    return "5/minute"

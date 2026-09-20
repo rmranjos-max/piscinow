@@ -256,3 +256,16 @@ async def editar_servico_submit(
     service.price_max = parsed_max
     service.description = description.strip() or None
     return RedirectResponse(url="/prestador/servicos", status_code=303)
+
+
+@router.post("/servicos/{service_id}/desativar")
+async def desativar_servico(
+    service_id: str,
+    db: Session = Depends(get_db),
+    prestador: Member = Depends(require_prestador),
+):
+    service = db.get(Service, service_id)
+    if service is None or service.member_id != prestador.id:
+        raise HTTPException(status_code=404)
+    service.active = False
+    return RedirectResponse(url="/prestador/servicos", status_code=303)

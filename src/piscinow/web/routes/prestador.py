@@ -1,6 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -205,4 +205,54 @@ async def criar_servico(
         description=description.strip() or None,
     )
     db.add(service)
+    return RedirectResponse(url="/prestador/servicos", status_code=303)
+
+
+@router.get("/servicos/{service_id}/editar", response_class=HTMLResponse)
+async def editar_servico_form(
+    service_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    prestador: Member = Depends(require_prestador),
+):
+    service = db.get(Service, service_id)
+    if service is None or service.member_id != prestador.id:
+        raise HTTPException(status_code=404)
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request, "prestador_servico_editar.html", {"service": service, "error": None}
+    )
+
+
+@router.post("/servicos/{service_id}/editar")
+async def editar_servico_submit(
+    service_id: str,
+    request: Request,
+    kind: str = Form(...),
+    category: str = Form(...),
+    name: str = Form(...),
+    price_min: str = Form(""),
+    price_max: str = Form(""),
+    description: str = Form(""),
+    db: Session = Depends(get_db),
+    prestador: Member = Depends(require_prestador),
+):
+    service = db.get(Service, service_id)
+    if service is None or service.member_id != prestador.id:
+        raise HTTPException(status_code=404)
+
+    templates = request.app.state.templates
+    error, parsed_min, parsed_max = _validate_service_form(kind, category, name, price_min, price_max)
+
+    if error:
+        return templates.TemplateResponse(
+            request, "prestador_servico_editar.html", {"service": service, "error": error}, status_code=400
+        )
+
+    service.kind = ServiceKind(kind)
+    service.category = category.strip()
+    service.name = name.strip()
+    service.price_min = parsed_min
+    service.price_max = parsed_max
+    service.description = description.strip() or None
     return RedirectResponse(url="/prestador/servicos", status_code=303)

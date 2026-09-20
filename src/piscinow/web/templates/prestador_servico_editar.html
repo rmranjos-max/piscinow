@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/prestador/servicos">Piscinow <span class="badge">Prestador</span></a>
+      <form method="post" action="/prestador/logout"><button class="mini-btn" type="submit">Sair</button></form>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap narrow">
+      <h1>Editar servi&ccedil;o</h1>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <form method="post" action="/prestador/servicos/{{ service.id }}/editar">
+        <div class="field">
+          <label for="kind">Tipo</label>
+          <select id="kind" name="kind">
+            <option value="instalacao" {% if service.kind.value == "instalacao" %}selected{% endif %}>Instala&ccedil;&atilde;o</option>
+            <option value="manutencao" {% if service.kind.value == "manutencao" %}selected{% endif %}>Manuten&ccedil;&atilde;o</option>
+            <option value="reparo" {% if service.kind.value == "reparo" %}selected{% endif %}>Reparo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Categoria</label>
+          <input id="category" type="text" name="category" value="{{ service.category }}">
+        </div>
+        <div class="field">
+          <label for="name">Nome</label>
+          <input id="name" type="text" name="name" value="{{ service.name }}">
+        </div>
+        <div class="field">
+          <label for="price_min">Pre&ccedil;o m&iacute;nimo (R$, opcional)</label>
+          <input id="price_min" type="text" name="price_min" value="{{ service.price_min or '' }}">
+        </div>
+        <div class="field">
+          <label for="price_max">Pre&ccedil;o m&aacute;ximo (R$, opcional)</label>
+          <input id="price_max" type="text" name="price_max" value="{{ service.price_max or '' }}">
+        </div>
+        <div class="field">
+          <label for="description">Descri&ccedil;&atilde;o (opcional)</label>
+          <textarea id="description" name="description">{{ service.description or '' }}</textarea>
+        </div>
+        <button class="btn accent" type="submit">Salvar altera&ccedil;&otilde;es</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

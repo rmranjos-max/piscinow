@@ -72,6 +72,8 @@
                 R$ {{ service.price_min }} - R$ {{ service.price_max }}
               {% elif service.price_min %}
                 a partir de R$ {{ service.price_min }}
+              {% elif service.price_max %}
+                at&eacute; R$ {{ service.price_max }}
               {% else %}
                 A combinar
               {% endif %}

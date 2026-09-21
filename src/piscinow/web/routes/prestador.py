@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -67,7 +68,6 @@ async def definir_senha_submit(
     existing = db.scalar(
         select(Member).where(
             Member.email == normalized_email,
-            Member.profile_type == ProfileType.PRESTADOR,
             Member.id != member.id,
         )
     )
@@ -75,7 +75,7 @@ async def definir_senha_submit(
         return templates.TemplateResponse(
             request,
             "prestador_definir_senha.html",
-            {"token": token, "invalid": False, "error": "Esse e-mail ja esta em uso por outro prestador."},
+            {"token": token, "invalid": False, "error": "Esse e-mail ja esta em uso."},
             status_code=400,
         )
     member.email = normalized_email
@@ -148,6 +148,17 @@ def _validate_service_form(
     return None, parsed_min, parsed_max
 
 
+def _get_owned_service(db: Session, service_id: str, prestador_id) -> Service:
+    try:
+        parsed_id = uuid.UUID(service_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    service = db.get(Service, parsed_id)
+    if service is None or service.member_id != prestador_id:
+        raise HTTPException(status_code=404)
+    return service
+
+
 @router.get("/servicos", response_class=HTMLResponse)
 async def servicos(
     request: Request,
@@ -217,9 +228,7 @@ async def editar_servico_form(
     db: Session = Depends(get_db),
     prestador: Member = Depends(require_prestador),
 ):
-    service = db.get(Service, service_id)
-    if service is None or service.member_id != prestador.id:
-        raise HTTPException(status_code=404)
+    service = _get_owned_service(db, service_id, prestador.id)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request, "prestador_servico_editar.html", {"service": service, "error": None}
@@ -239,9 +248,7 @@ async def editar_servico_submit(
     db: Session = Depends(get_db),
     prestador: Member = Depends(require_prestador),
 ):
-    service = db.get(Service, service_id)
-    if service is None or service.member_id != prestador.id:
-        raise HTTPException(status_code=404)
+    service = _get_owned_service(db, service_id, prestador.id)
 
     templates = request.app.state.templates
     error, parsed_min, parsed_max = _validate_service_form(kind, category, name, price_min, price_max)
@@ -266,9 +273,7 @@ async def desativar_servico(
     db: Session = Depends(get_db),
     prestador: Member = Depends(require_prestador),
 ):
-    service = db.get(Service, service_id)
-    if service is None or service.member_id != prestador.id:
-        raise HTTPException(status_code=404)
+    service = _get_owned_service(db, service_id, prestador.id)
     service.active = False
     return RedirectResponse(url="/prestador/servicos", status_code=303)
 

@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -34,6 +35,17 @@ def _validate_product_form(
     if not parsed_price.is_finite() or parsed_price <= 0 or parsed_price > _MAX_PRICE:
         return "Informe um preco valido.", None
     return None, parsed_price
+
+
+def _get_owned_product(db: Session, product_id: str, loja_id) -> Product:
+    try:
+        parsed_id = uuid.UUID(product_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    product = db.get(Product, parsed_id)
+    if product is None or product.member_id != loja_id:
+        raise HTTPException(status_code=404)
+    return product
 
 
 @router.get("/definir-senha/{token}", response_class=HTMLResponse)
@@ -87,7 +99,6 @@ async def definir_senha_submit(
     existing = db.scalar(
         select(Member).where(
             Member.email == normalized_email,
-            Member.profile_type == ProfileType.LOJA,
             Member.id != member.id,
         )
     )
@@ -95,7 +106,7 @@ async def definir_senha_submit(
         return templates.TemplateResponse(
             request,
             "loja_definir_senha.html",
-            {"token": token, "invalid": False, "error": "Esse e-mail ja esta em uso por outra loja."},
+            {"token": token, "invalid": False, "error": "Esse e-mail ja esta em uso."},
             status_code=400,
         )
     member.email = normalized_email
@@ -200,9 +211,7 @@ async def editar_produto_form(
     db: Session = Depends(get_db),
     loja: Member = Depends(require_loja),
 ):
-    product = db.get(Product, product_id)
-    if product is None or product.member_id != loja.id:
-        raise HTTPException(status_code=404)
+    product = _get_owned_product(db, product_id, loja.id)
     templates = request.app.state.templates
     return templates.TemplateResponse(request, "loja_produto_editar.html", {"product": product, "error": None})
 
@@ -220,9 +229,7 @@ async def editar_produto_submit(
     db: Session = Depends(get_db),
     loja: Member = Depends(require_loja),
 ):
-    product = db.get(Product, product_id)
-    if product is None or product.member_id != loja.id:
-        raise HTTPException(status_code=404)
+    product = _get_owned_product(db, product_id, loja.id)
 
     templates = request.app.state.templates
     error, parsed_price = _validate_product_form(kind, category, name, price, size_label)
@@ -269,8 +276,6 @@ async def desativar_produto(
     db: Session = Depends(get_db),
     loja: Member = Depends(require_loja),
 ):
-    product = db.get(Product, product_id)
-    if product is None or product.member_id != loja.id:
-        raise HTTPException(status_code=404)
+    product = _get_owned_product(db, product_id, loja.id)
     product.active = False
     return RedirectResponse(url="/loja/produtos", status_code=303)

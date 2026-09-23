@@ -144,3 +144,27 @@ async def test_second_message_after_finalization_does_not_duplicate_member(db_se
     assert result.reply_text == "Sua conversa ja foi concluida; nossa equipe segue o atendimento a partir daqui."
     # Verify no duplicate Member was created
     assert db_session.query(Member).count() == 1
+
+
+@pytest.mark.asyncio
+async def test_finalize_member_populates_region_column(db_session):
+    provider = FakeLLMProvider()
+    orchestrator = Orchestrator(db_session, provider)
+    conversation = Conversation()
+    db_session.add(conversation)
+    db_session.flush()
+
+    provider.queue_response('{"profile": "comprador", "confidence": 0.9}')
+    provider.queue_response(
+        '{"name": "Marina Duarte", "contact": "(19) 99999-0000", "region": "Valinhos", "intent": "alvenaria 6x3"}'
+    )
+    result = await orchestrator.handle_user_message(
+        conversation,
+        "Marina Duarte, (19) 99999-0000, em Valinhos, alvenaria 6x3",
+        referred_by=None,
+    )
+
+    assert result.finalized is True
+    member = db_session.get(Member, conversation.member_id)
+    assert member.region == "Valinhos"
+    assert member.profile_details["region"] == "Valinhos"

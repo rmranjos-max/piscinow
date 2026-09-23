@@ -84,6 +84,7 @@ class Orchestrator:
         member = Member(
             profile_type=conversation.profile_type_detected,
             name=fields.get("name", ""),
+            region=fields.get("region") or None,
             profile_details=fields,
             referred_by_member_id=referred_by.id if referred_by else None,
         )

@@ -62,7 +62,7 @@ async def aprovar(
     member = db.get(Member, member_id)
     if member is not None:
         member.approve(approved_by=admin.email)
-        if member.profile_type in (ProfileType.LOJA, ProfileType.PRESTADOR):
+        if member.profile_type in (ProfileType.LOJA, ProfileType.PRESTADOR, ProfileType.COMPRADOR):
             member.generate_set_password_token()
     return RedirectResponse(url="/admin/fila", status_code=303)
 
@@ -140,4 +140,22 @@ async def prestadores(
     base_url = get_settings().public_base_url
     return templates.TemplateResponse(
         request, "admin_prestadores.html", {"members": items, "base_url": base_url}
+    )
+
+
+@router.get("/compradores", response_class=HTMLResponse)
+async def compradores(
+    request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)
+):
+    templates = request.app.state.templates
+    items = list(
+        db.scalars(
+            select(Member)
+            .where(Member.profile_type == ProfileType.COMPRADOR, Member.status == MemberStatus.APPROVED)
+            .order_by(Member.approved_at.desc())
+        )
+    )
+    base_url = get_settings().public_base_url
+    return templates.TemplateResponse(
+        request, "admin_compradores.html", {"members": items, "base_url": base_url}
     )

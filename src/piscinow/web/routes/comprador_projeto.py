@@ -118,3 +118,32 @@ async def remover_servico(
     if link is not None:
         db.delete(link)
     return RedirectResponse(url="/comprador/projeto", status_code=303)
+
+
+@router.post("/projeto/confirmar")
+async def confirmar_projeto(
+    request: Request,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    project = _get_or_create_project(db, comprador.id)
+    if project.status != ProjectStatus.RASCUNHO:
+        raise HTTPException(status_code=400, detail="Projeto ja confirmado.")
+    if project.product_id is None:
+        templates = request.app.state.templates
+        services = _project_services(db, project.id)
+        return templates.TemplateResponse(
+            request,
+            "comprador_projeto.html",
+            {
+                "project": project,
+                "product": None,
+                "services": services,
+                "error": "Escolha um produto antes de confirmar o projeto.",
+                "note": None,
+                "sugestoes": None,
+            },
+            status_code=400,
+        )
+    project.status = ProjectStatus.CONFIRMADO
+    return RedirectResponse(url="/comprador/projeto", status_code=303)

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+  <header class="admin-topbar">
+    <div class="wrap">
+      <a class="brand" href="/comprador/projeto">Piscinow <span class="badge">Comprador</span></a>
+      <form method="post" action="/comprador/logout"><button class="mini-btn" type="submit">Sair</button></form>
+    </div>
+  </header>
+  <main class="admin-main">
+    <div class="wrap">
+      <h1>Meu projeto</h1>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      {% if note %}<p class="error">{{ note }}</p>{% endif %}
+
+      <div class="teach-form">
+        <h2 style="font-size:1.1rem; margin-bottom:14px;">
+          Status: {{ "Confirmado" if project.status.value == "confirmado" else "Rascunho" }}
+        </h2>
+
+        <h3>Produto</h3>
+        {% if product %}
+          <p>{{ product.name }} — {{ product.category }} — R$ {{ product.price }}</p>
+        {% else %}
+          <p class="empty-note">Nenhum produto escolhido ainda. <a href="/vitrine/produtos">Ver produtos</a></p>
+        {% endif %}
+
+        <h3>Servi&ccedil;os</h3>
+        {% if services %}
+        <table class="admin-table">
+          <thead><tr><th>Nome</th><th>Categoria</th><th>A&ccedil;&atilde;o</th></tr></thead>
+          <tbody>
+          {% for service in services %}
+            <tr>
+              <td>{{ service.name }}</td>
+              <td>{{ service.category }}</td>
+              <td>
+                {% if project.status.value == "rascunho" %}
+                <form method="post" action="/comprador/projeto/servicos/{{ service.id }}/remover">
+                  <button class="mini-btn" type="submit">Remover</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="empty-note">Nenhum servi&ccedil;o adicionado ainda. <a href="/vitrine/servicos">Ver servi&ccedil;os</a></p>
+        {% endif %}
+
+        {% if project.status.value == "rascunho" %}
+        <details style="margin-bottom:16px;">
+          <summary class="eyebrow" style="cursor:pointer;">Atalho: descreva o que voc&ecirc; quer</summary>
+          <form method="post" action="/comprador/projeto/buscar" style="margin-top:10px;">
+            <div class="field">
+              <textarea name="text" placeholder="Ex: piscina de fibra 6x3 em Valinhos, com instalacao"></textarea>
+            </div>
+            <button class="btn" type="submit">Buscar sugest&otilde;es</button>
+          </form>
+        </details>
+
+        {% if sugestoes %}
+        <h3>Sugest&otilde;es</h3>
+        {% if sugestoes.produtos %}
+        <ul>
+          {% for p in sugestoes.produtos %}
+          <li>
+            {{ p.name }} — {{ p.category }} — R$ {{ p.price }}
+            <form method="post" action="/comprador/projeto/produto" style="display:inline;">
+              <input type="hidden" name="product_id" value="{{ p.id }}">
+              <button class="mini-btn" type="submit">Escolher</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if sugestoes.servicos %}
+        <ul>
+          {% for s in sugestoes.servicos %}
+          <li>
+            {{ s.name }} — {{ s.category }}
+            <form method="post" action="/comprador/projeto/servicos/{{ s.id }}/adicionar" style="display:inline;">
+              <button class="mini-btn" type="submit">Adicionar</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% endif %}
+
+        <form method="post" action="/comprador/projeto/confirmar">
+          <button class="btn accent" type="submit">Confirmar projeto</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

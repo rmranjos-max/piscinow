@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="site">
+  <div class="wrap nav-row">
+    <a class="brand" href="/">Piscinow <span class="badge">Clube</span></a>
+  </div>
+</header>
+<main>
+  <section class="block">
+    <div class="wrap">
+      <h1>Servi&ccedil;os</h1>
+      <form method="get" action="/vitrine/servicos">
+        <div class="field">
+          <label for="kind">Tipo</label>
+          <select id="kind" name="kind">
+            <option value="">Todos</option>
+            <option value="instalacao" {% if kind == "instalacao" %}selected{% endif %}>Instala&ccedil;&atilde;o</option>
+            <option value="manutencao" {% if kind == "manutencao" %}selected{% endif %}>Manuten&ccedil;&atilde;o</option>
+            <option value="reparo" {% if kind == "reparo" %}selected{% endif %}>Reparo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Categoria</label>
+          <input id="category" type="text" name="category" value="{{ category }}">
+        </div>
+        <div class="field">
+          <label for="regiao">Regi&atilde;o</label>
+          <input id="regiao" type="text" name="regiao" value="{{ regiao }}">
+        </div>
+        <button class="btn" type="submit">Filtrar</button>
+      </form>
+
+      {% if items %}
+      <table class="admin-table">
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Prestador</th><th>Regi&atilde;o</th></tr></thead>
+        <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.service.name }}</td>
+            <td>{{ item.service.category }}</td>
+            <td>{{ item.prestador.name }}</td>
+            <td>{{ item.prestador.region or "-" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-note">Nenhum servi&ccedil;o encontrado.</p>
+      {% endif %}
+
+      <p><a href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a></p>
+    </div>
+  </section>
+</main>
+{% endblock %}

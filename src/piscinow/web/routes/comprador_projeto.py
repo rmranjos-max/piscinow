@@ -69,3 +69,52 @@ async def escolher_produto(
         raise HTTPException(status_code=404)
     project.product_id = product.id
     return RedirectResponse(url="/comprador/projeto", status_code=303)
+
+
+@router.post("/projeto/servicos/{service_id}/adicionar")
+async def adicionar_servico(
+    service_id: str,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    project = _get_or_create_project(db, comprador.id)
+    if project.status != ProjectStatus.RASCUNHO:
+        raise HTTPException(status_code=400, detail="Projeto ja confirmado, nao pode ser alterado.")
+    try:
+        parsed_id = uuid.UUID(service_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    service = db.get(Service, parsed_id)
+    if service is None or not service.active:
+        raise HTTPException(status_code=404)
+    existing = db.scalar(
+        select(ProjectService).where(
+            ProjectService.project_id == project.id, ProjectService.service_id == service.id
+        )
+    )
+    if existing is None:
+        db.add(ProjectService(project_id=project.id, service_id=service.id))
+    return RedirectResponse(url="/comprador/projeto", status_code=303)
+
+
+@router.post("/projeto/servicos/{service_id}/remover")
+async def remover_servico(
+    service_id: str,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    project = _get_or_create_project(db, comprador.id)
+    if project.status != ProjectStatus.RASCUNHO:
+        raise HTTPException(status_code=400, detail="Projeto ja confirmado, nao pode ser alterado.")
+    try:
+        parsed_id = uuid.UUID(service_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    link = db.scalar(
+        select(ProjectService).where(
+            ProjectService.project_id == project.id, ProjectService.service_id == parsed_id
+        )
+    )
+    if link is not None:
+        db.delete(link)
+    return RedirectResponse(url="/comprador/projeto", status_code=303)

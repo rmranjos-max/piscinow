@@ -5,12 +5,15 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from piscinow.agent.llm_provider import LLMProvider
+from piscinow.agent.project_search import extract_search_filters
 from piscinow.comprador_auth import require_comprador
 from piscinow.models.member import Member
-from piscinow.models.product import Product
+from piscinow.models.product import Product, ProductKind
 from piscinow.models.project import Project, ProjectService, ProjectStatus
-from piscinow.models.service import Service
-from piscinow.web.deps import get_db
+from piscinow.models.service import Service, ServiceKind
+from piscinow.rate_limit import limiter, chat_rate_limit_string
+from piscinow.web.deps import get_db, get_llm_provider
 
 router = APIRouter(prefix="/comprador")
 
@@ -147,3 +150,54 @@ async def confirmar_projeto(
         )
     project.status = ProjectStatus.CONFIRMADO
     return RedirectResponse(url="/comprador/projeto", status_code=303)
+
+
+@router.post("/projeto/buscar")
+@limiter.limit(chat_rate_limit_string)
+async def buscar_sugestoes(
+    request: Request,
+    text: str = Form(...),
+    db: Session = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+    comprador: Member = Depends(require_comprador),
+):
+    templates = request.app.state.templates
+    project = _get_or_create_project(db, comprador.id)
+    product = db.get(Product, project.product_id) if project.product_id else None
+    services = _project_services(db, project.id)
+    filters = await extract_search_filters(llm, text)
+
+    produtos_query = select(Product).join(Member, Product.member_id == Member.id).where(Product.active.is_(True))
+    if filters["kind"] in {k.value for k in ProductKind}:
+        produtos_query = produtos_query.where(Product.kind == ProductKind(filters["kind"]))
+    if filters["category"]:
+        produtos_query = produtos_query.where(Product.category.ilike(f"%{filters['category']}%"))
+    if filters["region"]:
+        produtos_query = produtos_query.where(Member.region.ilike(f"%{filters['region']}%"))
+    produtos_sugeridos = list(db.scalars(produtos_query.limit(10)))
+
+    servicos_query = select(Service).join(Member, Service.member_id == Member.id).where(Service.active.is_(True))
+    if filters["kind"] in {k.value for k in ServiceKind}:
+        servicos_query = servicos_query.where(Service.kind == ServiceKind(filters["kind"]))
+    if filters["category"]:
+        servicos_query = servicos_query.where(Service.category.ilike(f"%{filters['category']}%"))
+    if filters["region"]:
+        servicos_query = servicos_query.where(Member.region.ilike(f"%{filters['region']}%"))
+    servicos_sugeridos = list(db.scalars(servicos_query.limit(10)))
+
+    note = None
+    if not produtos_sugeridos and not servicos_sugeridos:
+        note = "Nao encontrei nada com esses filtros, tente ajustar."
+
+    return templates.TemplateResponse(
+        request,
+        "comprador_projeto.html",
+        {
+            "project": project,
+            "product": product,
+            "services": services,
+            "error": None,
+            "note": note,
+            "sugestoes": {"produtos": produtos_sugeridos, "servicos": servicos_sugeridos},
+        },
+    )

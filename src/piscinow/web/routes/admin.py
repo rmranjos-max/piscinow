@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Form, Request
+from decimal import Decimal, InvalidOperation
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,9 +14,10 @@ from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import Conversation
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.memory import MemoryKind, MemorySource
-from piscinow.models.payment import Payment
+from piscinow.models.payment import AllocationStatus, Payment, PaymentAllocation, PaymentStage, PaymentStatus
 from piscinow.models.product import Product
-from piscinow.models.project import Project, ProjectStatus
+from piscinow.models.project import Project, ProjectService, ProjectStatus
+from piscinow.models.service import Service
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
 from piscinow.web.deps import get_db
 
@@ -179,3 +182,103 @@ async def pagamentos(
     ).all()
     items = [{"project": row[0], "comprador": row[1], "product": row[2]} for row in rows]
     return templates.TemplateResponse(request, "admin_pagamentos.html", {"items": items})
+
+
+def _project_services(db: Session, project_id) -> list[Service]:
+    return list(
+        db.scalars(
+            select(Service)
+            .join(ProjectService, ProjectService.service_id == Service.id)
+            .where(ProjectService.project_id == project_id)
+        )
+    )
+
+
+@router.get("/pagamentos/{project_id}/cronograma", response_class=HTMLResponse)
+async def cronograma_form(
+    project_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    templates = request.app.state.templates
+    project = db.get(Project, project_id)
+    if project is None or project.status != ProjectStatus.CONFIRMADO:
+        raise HTTPException(status_code=404)
+    existing = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="Este projeto ja tem um pagamento.")
+    product = db.get(Product, project.product_id)
+    services = _project_services(db, project.id)
+    return templates.TemplateResponse(
+        request,
+        "admin_cronograma.html",
+        {"project": project, "product": product, "services": services, "error": None},
+    )
+
+
+@router.post("/pagamentos/{project_id}/cronograma")
+async def cronograma_submit(
+    project_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    templates = request.app.state.templates
+    project = db.get(Project, project_id)
+    if project is None or project.status != ProjectStatus.CONFIRMADO:
+        raise HTTPException(status_code=404)
+    existing = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="Este projeto ja tem um pagamento.")
+
+    product = db.get(Product, project.product_id)
+    services = _project_services(db, project.id)
+    form = await request.form()
+
+    def _parse_item(prefix: str, item_id) -> tuple[str | None, PaymentStage | None, Decimal | None]:
+        stage_raw = form.get(f"stage_{prefix}_{item_id}", "")
+        amount_raw = form.get(f"amount_{prefix}_{item_id}", "")
+        if stage_raw not in {s.value for s in PaymentStage}:
+            return "Escolha uma fase valida para todos os itens.", None, None
+        try:
+            amount = Decimal(str(amount_raw).replace(",", "."))
+        except (InvalidOperation, ValueError):
+            return "Informe um valor valido para todos os itens.", None, None
+        if not amount.is_finite() or amount <= 0:
+            return "Informe um valor valido para todos os itens.", None, None
+        return None, PaymentStage(stage_raw), amount
+
+    allocations_data = []
+    error = None
+
+    error, stage, amount = _parse_item("product", product.id)
+    if not error:
+        allocations_data.append(
+            {"stage": stage, "amount": amount, "recipient_member_id": product.member_id, "product_id": product.id}
+        )
+
+    if not error:
+        for service in services:
+            error, stage, amount = _parse_item("service", service.id)
+            if error:
+                break
+            allocations_data.append(
+                {"stage": stage, "amount": amount, "recipient_member_id": service.member_id, "service_id": service.id}
+            )
+
+    if error:
+        return templates.TemplateResponse(
+            request,
+            "admin_cronograma.html",
+            {"project": project, "product": product, "services": services, "error": error},
+            status_code=400,
+        )
+
+    total = sum((item["amount"] for item in allocations_data), Decimal("0"))
+    payment = Payment(project_id=project.id, total_amount=total)
+    db.add(payment)
+    db.flush()
+    for item in allocations_data:
+        db.add(PaymentAllocation(payment_id=payment.id, **item))
+    return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)

@@ -31,7 +31,7 @@
 
       {% if items %}
       <table class="admin-table">
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Loja</th><th>Regi&atilde;o</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Loja</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
         <tbody>
         {% for item in items %}
           <tr>
@@ -39,6 +39,15 @@
             <td>{{ item.product.category }}</td>
             <td>{{ item.loja.name }}</td>
             <td>{{ item.loja.region or "-" }}</td>
+            {% if comprador %}
+            <td>R$ {{ item.product.price }}</td>
+            <td>
+              <form method="post" action="/comprador/projeto/produto">
+                <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                <button class="mini-btn" type="submit">Escolher</button>
+              </form>
+            </td>
+            {% endif %}
           </tr>
         {% endfor %}
         </tbody>
@@ -47,7 +56,9 @@
       <p class="empty-note">Nenhum produto encontrado.</p>
       {% endif %}
 
+      {% if not comprador %}
       <p><a href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a></p>
+      {% endif %}
     </div>
   </section>
 </main>

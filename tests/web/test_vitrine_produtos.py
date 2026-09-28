@@ -79,3 +79,41 @@ def test_vitrine_produtos_filters_by_region(client, db_session):
 def test_vitrine_produtos_does_not_require_authentication(client):
     response = client.get("/vitrine/produtos")
     assert response.status_code == 200
+
+
+def test_vitrine_produtos_shows_price_and_choose_button_when_logged_in(client, db_session):
+    from piscinow.models.member import MemberStatus
+
+    comprador = Member(
+        profile_type=ProfileType.COMPRADOR, name="Marina Duarte", status=MemberStatus.APPROVED, email="comprador@example.com"
+    )
+    comprador.set_password("senha-forte-123")
+    db_session.add(comprador)
+    db_session.flush()
+    client.post("/comprador/login", data={"email": "comprador@example.com", "password": "senha-forte-123"})
+
+    loja = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul")
+    db_session.add(loja)
+    db_session.flush()
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra 6x3", price=18000)
+    db_session.add(product)
+    db_session.flush()
+
+    response = client.get("/vitrine/produtos")
+
+    assert "18000" in response.text
+    assert "Escolher" in response.text
+
+
+def test_vitrine_produtos_hides_price_when_not_logged_in(client, db_session):
+    loja = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul")
+    db_session.add(loja)
+    db_session.flush()
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra 6x3", price=18000)
+    db_session.add(product)
+    db_session.flush()
+
+    response = client.get("/vitrine/produtos")
+
+    assert "18000" not in response.text
+    assert "Escolher" not in response.text

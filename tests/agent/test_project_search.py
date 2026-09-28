@@ -22,3 +22,15 @@ async def test_extract_search_filters_returns_blank_fields_on_malformed_response
     result = await extract_search_filters(provider, "algo confuso")
 
     assert result == {"kind": "", "category": "", "region": ""}
+
+
+@pytest.mark.asyncio
+async def test_extract_search_filters_normalizes_list_values_to_string():
+    provider = FakeLLMProvider(
+        ['{"kind": ["piscina", "instalacao"], "category": null, "region": "Valinhos"}']
+    )
+
+    result = await extract_search_filters(provider, "piscina ou instalacao em Valinhos")
+
+    assert isinstance(result["kind"], str)
+    assert result["kind"] == "piscina, instalacao"

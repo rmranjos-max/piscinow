@@ -3,12 +3,23 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from piscinow.models.member import Member
+from piscinow.comprador_auth import COMPRADOR_SESSION_KEY
+from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.service import Service, ServiceKind
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/vitrine")
+
+
+def _optional_comprador(request: Request, db: Session = Depends(get_db)) -> Member | None:
+    member_id = request.session.get(COMPRADOR_SESSION_KEY)
+    if not member_id:
+        return None
+    member = db.get(Member, member_id)
+    if member is None or member.profile_type != ProfileType.COMPRADOR or member.status != MemberStatus.APPROVED:
+        return None
+    return member
 
 
 @router.get("/produtos", response_class=HTMLResponse)
@@ -18,6 +29,7 @@ async def vitrine_produtos(
     category: str = "",
     regiao: str = "",
     db: Session = Depends(get_db),
+    comprador: Member | None = Depends(_optional_comprador),
 ):
     templates = request.app.state.templates
     query = select(Product, Member).join(Member, Product.member_id == Member.id).where(Product.active.is_(True))
@@ -32,7 +44,7 @@ async def vitrine_produtos(
     return templates.TemplateResponse(
         request,
         "vitrine_produtos.html",
-        {"items": items, "kind": kind, "category": category, "regiao": regiao},
+        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador},
     )
 
 
@@ -43,6 +55,7 @@ async def vitrine_servicos(
     category: str = "",
     regiao: str = "",
     db: Session = Depends(get_db),
+    comprador: Member | None = Depends(_optional_comprador),
 ):
     templates = request.app.state.templates
     query = select(Service, Member).join(Member, Service.member_id == Member.id).where(Service.active.is_(True))
@@ -57,5 +70,5 @@ async def vitrine_servicos(
     return templates.TemplateResponse(
         request,
         "vitrine_servicos.html",
-        {"items": items, "kind": kind, "category": category, "regiao": regiao},
+        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador},
     )

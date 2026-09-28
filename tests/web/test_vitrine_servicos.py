@@ -78,3 +78,57 @@ def test_vitrine_servicos_filters_by_region(client, db_session):
 def test_vitrine_servicos_does_not_require_authentication(client):
     response = client.get("/vitrine/servicos")
     assert response.status_code == 200
+
+
+def test_vitrine_servicos_shows_price_and_add_button_when_logged_in(client, db_session):
+    from piscinow.models.member import MemberStatus
+
+    comprador = Member(
+        profile_type=ProfileType.COMPRADOR, name="Marina Duarte", status=MemberStatus.APPROVED, email="comprador@example.com"
+    )
+    comprador.set_password("senha-forte-123")
+    db_session.add(comprador)
+    db_session.flush()
+    client.post("/comprador/login", data={"email": "comprador@example.com", "password": "senha-forte-123"})
+
+    prestador = Member(profile_type=ProfileType.PRESTADOR, name="Instalacoes Sul")
+    db_session.add(prestador)
+    db_session.flush()
+    service = Service(
+        member_id=prestador.id,
+        kind=ServiceKind.INSTALACAO,
+        category="piscina de fibra",
+        name="Instalacao completa",
+        price_min=3000,
+        price_max=8000,
+    )
+    db_session.add(service)
+    db_session.flush()
+
+    response = client.get("/vitrine/servicos")
+
+    assert "3000" in response.text
+    assert "8000" in response.text
+    assert "Adicionar" in response.text
+
+
+def test_vitrine_servicos_hides_price_when_not_logged_in(client, db_session):
+    prestador = Member(profile_type=ProfileType.PRESTADOR, name="Instalacoes Sul")
+    db_session.add(prestador)
+    db_session.flush()
+    service = Service(
+        member_id=prestador.id,
+        kind=ServiceKind.INSTALACAO,
+        category="piscina de fibra",
+        name="Instalacao completa",
+        price_min=3000,
+        price_max=8000,
+    )
+    db_session.add(service)
+    db_session.flush()
+
+    response = client.get("/vitrine/servicos")
+
+    assert "3000" not in response.text
+    assert "8000" not in response.text
+    assert "Adicionar" not in response.text

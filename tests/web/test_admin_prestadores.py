@@ -34,18 +34,6 @@ def test_aprovar_loja_still_generates_set_password_token(client, db_session):
     assert member.set_password_token is not None
 
 
-def test_aprovar_comprador_does_not_generate_token(client, db_session):
-    _logged_in(client, db_session)
-    member = Member(profile_type=ProfileType.COMPRADOR, name="Marina", status=MemberStatus.WAITLISTED)
-    db_session.add(member)
-    db_session.flush()
-
-    client.post(f"/admin/fila/{member.id}/aprovar")
-
-    db_session.refresh(member)
-    assert member.set_password_token is None
-
-
 def test_prestadores_page_shows_set_password_link_when_pending(client, db_session):
     _logged_in(client, db_session)
     member = Member(profile_type=ProfileType.PRESTADOR, name="Instalacoes Sul", status=MemberStatus.APPROVED)

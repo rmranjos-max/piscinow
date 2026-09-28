@@ -81,16 +81,22 @@ class Orchestrator:
 
     def _finalize_member(self, conversation: Conversation, *, referred_by: Member | None) -> Member:
         fields = conversation.collected_fields
+        raw_region = fields.get("region")
+        if isinstance(raw_region, list):
+            raw_region = ", ".join(str(item) for item in raw_region)
+        region = str(raw_region).strip()[:100] if raw_region else None
         member = Member(
             profile_type=conversation.profile_type_detected,
             name=fields.get("name", ""),
-            region=fields.get("region") or None,
+            region=region,
             profile_details=fields,
             referred_by_member_id=referred_by.id if referred_by else None,
         )
         member.submit_for_review()
         if referred_by is not None:
             member.auto_approve_via_referral()
+            if member.profile_type in (ProfileType.LOJA, ProfileType.PRESTADOR, ProfileType.COMPRADOR):
+                member.generate_set_password_token()
         self._session.add(member)
         self._session.flush()
         if member.profile_type == ProfileType.EMBAIXADOR:

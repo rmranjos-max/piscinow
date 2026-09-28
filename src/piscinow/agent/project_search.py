@@ -11,8 +11,16 @@ Use null para campos que nao aparecem no texto. Responda APENAS com o JSON."""
 async def extract_search_filters(llm: LLMProvider, text: str) -> dict:
     raw = await llm.generate([ChatMessage(role="user", content=text)], system=_SYSTEM_PROMPT)
     data = parse_json_object(raw)
+
+    def _as_str(value) -> str:
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            return ", ".join(str(item) for item in value)
+        return str(value) if value is not None else ""
+
     return {
-        "kind": data.get("kind") or "",
-        "category": data.get("category") or "",
-        "region": data.get("region") or "",
+        "kind": _as_str(data.get("kind")),
+        "category": _as_str(data.get("category")),
+        "region": _as_str(data.get("region")),
     }

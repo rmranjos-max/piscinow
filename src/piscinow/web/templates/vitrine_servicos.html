@@ -32,7 +32,7 @@
 
       {% if items %}
       <table class="admin-table">
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Prestador</th><th>Regi&atilde;o</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Prestador</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
         <tbody>
         {% for item in items %}
           <tr>
@@ -40,6 +40,24 @@
             <td>{{ item.service.category }}</td>
             <td>{{ item.prestador.name }}</td>
             <td>{{ item.prestador.region or "-" }}</td>
+            {% if comprador %}
+            <td>
+              {% if item.service.price_min and item.service.price_max %}
+                R$ {{ item.service.price_min }} - R$ {{ item.service.price_max }}
+              {% elif item.service.price_min %}
+                a partir de R$ {{ item.service.price_min }}
+              {% elif item.service.price_max %}
+                at&eacute; R$ {{ item.service.price_max }}
+              {% else %}
+                A combinar
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="/comprador/projeto/servicos/{{ item.service.id }}/adicionar">
+                <button class="mini-btn" type="submit">Adicionar</button>
+              </form>
+            </td>
+            {% endif %}
           </tr>
         {% endfor %}
         </tbody>
@@ -48,7 +66,9 @@
       <p class="empty-note">Nenhum servi&ccedil;o encontrado.</p>
       {% endif %}
 
+      {% if not comprador %}
       <p><a href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a></p>
+      {% endif %}
     </div>
   </section>
 </main>

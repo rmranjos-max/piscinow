@@ -11,6 +11,9 @@ import piscinow.models.admin  # noqa: F401
 import piscinow.models.conversation  # noqa: F401
 import piscinow.models.member  # noqa: F401
 import piscinow.models.memory  # noqa: F401
+import piscinow.models.product  # noqa: F401
+import piscinow.models.project  # noqa: F401
+import piscinow.models.service  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

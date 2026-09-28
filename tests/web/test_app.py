@@ -14,3 +14,14 @@ def test_app_serves_prestador_login_page(client):
     response = client.get("/prestador/login")
     assert response.status_code == 200
     assert "Painel do prestador" in response.text
+
+
+def test_app_serves_vitrine_produtos_page(client):
+    response = client.get("/vitrine/produtos")
+    assert response.status_code == 200
+
+
+def test_app_serves_comprador_login_page(client):
+    response = client.get("/comprador/login")
+    assert response.status_code == 200
+    assert "Painel do comprador" in response.text

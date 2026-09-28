@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from piscinow.agent.provider_factory import build_llm_provider
 from piscinow.config import get_settings
 from piscinow.rate_limit import limiter
-from piscinow.web.routes import admin, chat, loja, pages, prestador, vitrine
+from piscinow.web.routes import admin, chat, comprador, comprador_projeto, loja, pages, prestador, vitrine
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,8 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(loja.router)
     app.include_router(prestador.router)
+    app.include_router(comprador.router)
+    app.include_router(comprador_projeto.router)
     app.include_router(vitrine.router)
     return app
 

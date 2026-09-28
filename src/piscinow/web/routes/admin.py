@@ -12,6 +12,9 @@ from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import Conversation
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.memory import MemoryKind, MemorySource
+from piscinow.models.payment import Payment
+from piscinow.models.product import Product
+from piscinow.models.project import Project, ProjectStatus
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
 from piscinow.web.deps import get_db
 
@@ -159,3 +162,20 @@ async def compradores(
     return templates.TemplateResponse(
         request, "admin_compradores.html", {"members": items, "base_url": base_url}
     )
+
+
+@router.get("/pagamentos", response_class=HTMLResponse)
+async def pagamentos(
+    request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)
+):
+    templates = request.app.state.templates
+    paid_project_ids = select(Payment.project_id)
+    rows = db.execute(
+        select(Project, Member, Product)
+        .join(Member, Project.member_id == Member.id)
+        .join(Product, Project.product_id == Product.id)
+        .where(Project.status == ProjectStatus.CONFIRMADO, Project.id.not_in(paid_project_ids))
+        .order_by(Project.updated_at.desc())
+    ).all()
+    items = [{"project": row[0], "comprador": row[1], "product": row[2]} for row in rows]
+    return templates.TemplateResponse(request, "admin_pagamentos.html", {"items": items})

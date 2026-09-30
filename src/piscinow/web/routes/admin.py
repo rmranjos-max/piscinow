@@ -282,3 +282,33 @@ async def cronograma_submit(
     for item in allocations_data:
         db.add(PaymentAllocation(payment_id=payment.id, **item))
     return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)
+
+
+@router.get("/pagamentos/{payment_id}", response_class=HTMLResponse)
+async def pagamento_detalhe(
+    payment_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    templates = request.app.state.templates
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise HTTPException(status_code=404)
+    allocations = list(
+        db.scalars(select(PaymentAllocation).where(PaymentAllocation.payment_id == payment.id))
+    )
+    stages_data = []
+    for stage in PaymentStage:
+        stage_allocations = [
+            (allocation, db.get(Member, allocation.recipient_member_id))
+            for allocation in allocations
+            if allocation.stage == stage
+        ]
+        if not stage_allocations:
+            continue
+        all_released = all(a.status == AllocationStatus.LIBERADO for a, _ in stage_allocations)
+        stages_data.append({"stage": stage, "allocations": stage_allocations, "all_released": all_released})
+    return templates.TemplateResponse(
+        request, "admin_pagamento_detalhe.html", {"payment": payment, "stages_data": stages_data, "error": None}
+    )

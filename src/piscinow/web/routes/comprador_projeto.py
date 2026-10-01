@@ -9,6 +9,7 @@ from piscinow.agent.llm_provider import LLMProvider
 from piscinow.agent.project_search import extract_search_filters
 from piscinow.comprador_auth import require_comprador
 from piscinow.models.member import Member
+from piscinow.models.payment import Payment, PaymentAllocation
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service, ServiceKind
@@ -200,4 +201,26 @@ async def buscar_sugestoes(
             "note": note,
             "sugestoes": {"produtos": produtos_sugeridos, "servicos": servicos_sugeridos},
         },
+    )
+
+
+@router.get("/projeto/pagamento", response_class=HTMLResponse)
+async def ver_pagamento(
+    request: Request,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    templates = request.app.state.templates
+    project = _get_or_create_project(db, comprador.id)
+    payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    if payment is None:
+        raise HTTPException(status_code=404)
+    allocations = [
+        (allocation, db.get(Member, allocation.recipient_member_id))
+        for allocation in db.scalars(
+            select(PaymentAllocation).where(PaymentAllocation.payment_id == payment.id)
+        )
+    ]
+    return templates.TemplateResponse(
+        request, "comprador_pagamento.html", {"payment": payment, "allocations": allocations, "error": None}
     )

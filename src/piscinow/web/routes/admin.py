@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -18,8 +19,9 @@ from piscinow.models.payment import AllocationStatus, Payment, PaymentAllocation
 from piscinow.models.product import Product
 from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service
+from piscinow.payment.payment_provider import PaymentProvider
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
-from piscinow.web.deps import get_db
+from piscinow.web.deps import get_db, get_payment_provider
 
 router = APIRouter(prefix="/admin")
 
@@ -312,3 +314,38 @@ async def pagamento_detalhe(
     return templates.TemplateResponse(
         request, "admin_pagamento_detalhe.html", {"payment": payment, "stages_data": stages_data, "error": None}
     )
+
+
+@router.post("/pagamentos/{payment_id}/fases/{stage}/liberar")
+async def liberar_fase(
+    payment_id: str,
+    stage: str,
+    db: Session = Depends(get_db),
+    payment_provider: PaymentProvider = Depends(get_payment_provider),
+    admin: AdminUser = Depends(require_admin),
+):
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise HTTPException(status_code=404)
+    if payment.status != PaymentStatus.PAGO:
+        raise HTTPException(status_code=400, detail="Pagamento ainda nao foi pago pelo comprador.")
+    if stage not in {s.value for s in PaymentStage}:
+        raise HTTPException(status_code=404)
+    allocations = list(
+        db.scalars(
+            select(PaymentAllocation).where(
+                PaymentAllocation.payment_id == payment.id,
+                PaymentAllocation.stage == PaymentStage(stage),
+                PaymentAllocation.status == AllocationStatus.RETIDO,
+            )
+        )
+    )
+    for allocation in allocations:
+        transfer_id = await payment_provider.release(
+            charge_id=payment.external_charge_id, amount=allocation.amount, external_reference=str(allocation.id)
+        )
+        allocation.status = AllocationStatus.LIBERADO
+        allocation.released_at = datetime.now(timezone.utc)
+        allocation.released_by = admin.email
+        allocation.external_transfer_id = transfer_id
+    return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)

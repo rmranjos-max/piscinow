@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from piscinow.agent.provider_factory import build_llm_provider
 from piscinow.config import get_settings
+from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
 from piscinow.web.routes import admin, chat, comprador, comprador_projeto, loja, pages, prestador, vitrine
 
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)
+    app.state.payment_provider = FakePaymentProvider()
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(pages.router)

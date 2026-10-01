@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -9,12 +10,13 @@ from piscinow.agent.llm_provider import LLMProvider
 from piscinow.agent.project_search import extract_search_filters
 from piscinow.comprador_auth import require_comprador
 from piscinow.models.member import Member
-from piscinow.models.payment import Payment, PaymentAllocation
+from piscinow.models.payment import Payment, PaymentAllocation, PaymentStatus
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service, ServiceKind
+from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import limiter, chat_rate_limit_string
-from piscinow.web.deps import get_db, get_llm_provider
+from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider
 
 router = APIRouter(prefix="/comprador")
 
@@ -224,3 +226,45 @@ async def ver_pagamento(
     return templates.TemplateResponse(
         request, "comprador_pagamento.html", {"payment": payment, "allocations": allocations, "error": None}
     )
+
+
+@router.post("/projeto/pagamento/pagar")
+async def pagar(
+    request: Request,
+    db: Session = Depends(get_db),
+    payment_provider: PaymentProvider = Depends(get_payment_provider),
+    comprador: Member = Depends(require_comprador),
+):
+    templates = request.app.state.templates
+    project = _get_or_create_project(db, comprador.id)
+    payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    if payment is None:
+        raise HTTPException(status_code=404)
+    if payment.status != PaymentStatus.PENDENTE:
+        raise HTTPException(status_code=400, detail="Este pagamento ja foi processado.")
+
+    allocations = [
+        (allocation, db.get(Member, allocation.recipient_member_id))
+        for allocation in db.scalars(
+            select(PaymentAllocation).where(PaymentAllocation.payment_id == payment.id)
+        )
+    ]
+
+    try:
+        charge_id = await payment_provider.charge(amount=payment.total_amount, external_reference=str(payment.id))
+    except PaymentProviderError:
+        return templates.TemplateResponse(
+            request,
+            "comprador_pagamento.html",
+            {
+                "payment": payment,
+                "allocations": allocations,
+                "error": "Nao foi possivel processar o pagamento. Tente novamente.",
+            },
+            status_code=400,
+        )
+
+    payment.external_charge_id = charge_id
+    payment.status = PaymentStatus.PAGO
+    payment.paid_at = datetime.now(timezone.utc)
+    return RedirectResponse(url="/comprador/projeto/pagamento", status_code=303)

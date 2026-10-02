@@ -18,6 +18,10 @@
           Status: {{ "Confirmado" if project.status.value == "confirmado" else "Rascunho" }}
         </h2>
 
+        {% if payment %}
+        <p><a class="mini-btn" href="/comprador/projeto/pagamento">Ver pagamento</a></p>
+        {% endif %}
+
         <h3>Produto</h3>
         {% if product %}
           <p>{{ product.name }} — {{ product.category }} — R$ {{ product.price }}</p>

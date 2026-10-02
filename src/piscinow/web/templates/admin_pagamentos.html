@@ -33,6 +33,25 @@
       {% else %}
       <p class="empty-note">Nenhum projeto aguardando cronograma no momento.</p>
       {% endif %}
+
+      <h2 style="font-size:1.1rem; margin-top:24px;">Pagamentos criados</h2>
+      {% if payments %}
+      <table class="admin-table">
+        <thead><tr><th>Comprador</th><th>Status</th><th>Total</th><th>A&ccedil;&atilde;o</th></tr></thead>
+        <tbody>
+        {% for item in payments %}
+          <tr>
+            <td>{{ item.comprador.name }}</td>
+            <td>{{ "Pago" if item.payment.status.value == "pago" else "Pendente" }}</td>
+            <td>R$ {{ item.payment.total_amount | brl }}</td>
+            <td><a class="mini-btn" href="/admin/pagamentos/{{ item.payment.id }}">Ver detalhe</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-note">Nenhum pagamento criado ainda.</p>
+      {% endif %}
     </div>
   </main>
 </div>

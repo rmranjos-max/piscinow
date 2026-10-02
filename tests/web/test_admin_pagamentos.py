@@ -66,3 +66,17 @@ def test_pagamentos_redirects_to_login_when_not_authenticated(client):
     response = client.get("/admin/pagamentos", follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/admin/login"
+
+
+def test_pagamentos_lists_existing_payments_with_link_to_detail(client, db_session):
+    _logged_in(client, db_session)
+    project, product = _confirmed_project(db_session, comprador_name="Com Pagamento")
+    payment = Payment(project_id=project.id, total_amount=18000)
+    db_session.add(payment)
+    db_session.flush()
+
+    response = client.get("/admin/pagamentos")
+
+    assert response.status_code == 200
+    assert "Com Pagamento" in response.text
+    assert f"/admin/pagamentos/{payment.id}" in response.text

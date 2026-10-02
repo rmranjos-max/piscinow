@@ -50,10 +50,21 @@ async def projeto(
     project = _get_or_create_project(db, comprador.id)
     product = db.get(Product, project.product_id) if project.product_id else None
     services = _project_services(db, project.id)
+    payment = None
+    if project.status == ProjectStatus.CONFIRMADO:
+        payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
     return templates.TemplateResponse(
         request,
         "comprador_projeto.html",
-        {"project": project, "product": product, "services": services, "error": None, "note": None, "sugestoes": None},
+        {
+            "project": project,
+            "product": product,
+            "services": services,
+            "payment": payment,
+            "error": None,
+            "note": None,
+            "sugestoes": None,
+        },
     )
 
 

@@ -19,7 +19,7 @@ from piscinow.models.payment import AllocationStatus, Payment, PaymentAllocation
 from piscinow.models.product import Product
 from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service
-from piscinow.payment.payment_provider import PaymentProvider
+from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
 from piscinow.web.deps import get_db, get_payment_provider
 
@@ -183,7 +183,53 @@ async def pagamentos(
         .order_by(Project.updated_at.desc())
     ).all()
     items = [{"project": row[0], "comprador": row[1], "product": row[2]} for row in rows]
-    return templates.TemplateResponse(request, "admin_pagamentos.html", {"items": items})
+
+    payment_rows = db.execute(
+        select(Payment, Project, Member, Product)
+        .join(Project, Payment.project_id == Project.id)
+        .join(Member, Project.member_id == Member.id)
+        .join(Product, Project.product_id == Product.id)
+        .order_by(Payment.created_at.desc())
+    ).all()
+    payments = [
+        {"payment": row[0], "project": row[1], "comprador": row[2], "product": row[3]} for row in payment_rows
+    ]
+    return templates.TemplateResponse(request, "admin_pagamentos.html", {"items": items, "payments": payments})
+
+
+MAX_PAYMENT_AMOUNT = Decimal("99999999.99")
+
+
+def _parse_amount(raw) -> Decimal | None:
+    """Parse a monetary value typed by an admin, pt-BR style.
+
+    Accepts at most one separator (either "," or ".") used as the decimal
+    separator - this covers plain integers ("18000"), comma-decimals
+    ("18000,50", the pt-BR norm) and dot-decimals ("18000.50"). Anything
+    with two separators (e.g. a pt-BR thousands-grouped "18.000,50") is
+    rejected rather than guessed at, to avoid silently misreading one
+    locale's convention as another's. The max-2-decimal-places check below
+    also catches the dangerous case of an admin typing "18.000" meaning
+    eighteen thousand: that parses to 18.000, which has 3 decimal places
+    and gets rejected instead of silently saved as R$ 18,00.
+    """
+    text = str(raw).strip()
+    if not text:
+        return None
+    if sum(text.count(c) for c in ".,") > 1:
+        return None
+    normalized = text.replace(",", ".")
+    try:
+        amount = Decimal(normalized)
+    except (InvalidOperation, ValueError):
+        return None
+    if not amount.is_finite() or amount <= 0:
+        return None
+    if amount.as_tuple().exponent < -2:
+        return None
+    if amount > MAX_PAYMENT_AMOUNT:
+        return None
+    return amount.quantize(Decimal("0.01"))
 
 
 def _project_services(db: Session, project_id) -> list[Service]:
@@ -243,11 +289,8 @@ async def cronograma_submit(
         amount_raw = form.get(f"amount_{prefix}_{item_id}", "")
         if stage_raw not in {s.value for s in PaymentStage}:
             return "Escolha uma fase valida para todos os itens.", None, None
-        try:
-            amount = Decimal(str(amount_raw).replace(",", "."))
-        except (InvalidOperation, ValueError):
-            return "Informe um valor valido para todos os itens.", None, None
-        if not amount.is_finite() or amount <= 0:
+        amount = _parse_amount(amount_raw)
+        if amount is None:
             return "Informe um valor valido para todos os itens.", None, None
         return None, PaymentStage(stage_raw), amount
 
@@ -277,7 +320,7 @@ async def cronograma_submit(
             status_code=400,
         )
 
-    total = sum((item["amount"] for item in allocations_data), Decimal("0"))
+    total = sum((item["amount"] for item in allocations_data), Decimal("0")).quantize(Decimal("0.01"))
     payment = Payment(project_id=project.id, total_amount=total)
     db.add(payment)
     db.flush()
@@ -286,17 +329,7 @@ async def cronograma_submit(
     return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)
 
 
-@router.get("/pagamentos/{payment_id}", response_class=HTMLResponse)
-async def pagamento_detalhe(
-    payment_id: str,
-    request: Request,
-    db: Session = Depends(get_db),
-    admin: AdminUser = Depends(require_admin),
-):
-    templates = request.app.state.templates
-    payment = db.get(Payment, payment_id)
-    if payment is None:
-        raise HTTPException(status_code=404)
+def _stages_data_for_payment(db: Session, payment: Payment) -> list[dict]:
     allocations = list(
         db.scalars(select(PaymentAllocation).where(PaymentAllocation.payment_id == payment.id))
     )
@@ -311,6 +344,21 @@ async def pagamento_detalhe(
             continue
         all_released = all(a.status == AllocationStatus.LIBERADO for a, _ in stage_allocations)
         stages_data.append({"stage": stage, "allocations": stage_allocations, "all_released": all_released})
+    return stages_data
+
+
+@router.get("/pagamentos/{payment_id}", response_class=HTMLResponse)
+async def pagamento_detalhe(
+    payment_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    templates = request.app.state.templates
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise HTTPException(status_code=404)
+    stages_data = _stages_data_for_payment(db, payment)
     return templates.TemplateResponse(
         request, "admin_pagamento_detalhe.html", {"payment": payment, "stages_data": stages_data, "error": None}
     )
@@ -320,10 +368,12 @@ async def pagamento_detalhe(
 async def liberar_fase(
     payment_id: str,
     stage: str,
+    request: Request,
     db: Session = Depends(get_db),
     payment_provider: PaymentProvider = Depends(get_payment_provider),
     admin: AdminUser = Depends(require_admin),
 ):
+    templates = request.app.state.templates
     payment = db.get(Payment, payment_id)
     if payment is None:
         raise HTTPException(status_code=404)
@@ -340,12 +390,34 @@ async def liberar_fase(
             )
         )
     )
+    release_error = None
     for allocation in allocations:
-        transfer_id = await payment_provider.release(
-            charge_id=payment.external_charge_id, amount=allocation.amount, external_reference=str(allocation.id)
-        )
+        try:
+            transfer_id = await payment_provider.release(
+                charge_id=payment.external_charge_id, amount=allocation.amount, external_reference=str(allocation.id)
+            )
+        except PaymentProviderError:
+            release_error = (
+                "Nao foi possivel liberar todos os itens desta fase. As alocacoes ja liberadas "
+                "foram mantidas; tente novamente para as restantes."
+            )
+            break
         allocation.status = AllocationStatus.LIBERADO
         allocation.released_at = datetime.now(timezone.utc)
         allocation.released_by = admin.email
         allocation.external_transfer_id = transfer_id
+        # Commit this single allocation now, not at end-of-request: if a later
+        # allocation's release() call fails, we must not roll back releases
+        # that already happened for real at the provider.
+        db.commit()
+
+    if release_error is not None:
+        stages_data = _stages_data_for_payment(db, payment)
+        return templates.TemplateResponse(
+            request,
+            "admin_pagamento_detalhe.html",
+            {"payment": payment, "stages_data": stages_data, "error": release_error},
+            status_code=400,
+        )
+
     return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)

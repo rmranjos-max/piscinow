@@ -111,6 +111,104 @@ def test_cronograma_submit_rejects_invalid_amount(client, db_session):
     assert db_session.query(Payment).count() == 0
 
 
+def test_cronograma_submit_rejects_ambiguous_value_with_multiple_separators(client, db_session):
+    """A value like "18.000,50" (pt-BR thousands dot + decimal comma) has two
+    separator characters - rejected rather than guessed at, per the fix-wave
+    decision to require a single, unambiguous decimal separator."""
+    _logged_in(client, db_session)
+    project, product, service = _confirmed_project_with_service(db_session)
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "18.000,50",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "3000",
+        },
+    )
+
+    assert response.status_code == 400
+    assert db_session.query(Payment).count() == 0
+
+
+def test_cronograma_submit_rejects_three_decimal_places(client, db_session):
+    """"18.000" parses as the Decimal 18.000 (3 decimal places) if we accepted
+    it as a lone-dot decimal - exactly the silent 1000x-smaller bug from
+    Finding 3. Capping at 2 decimal places rejects it instead."""
+    _logged_in(client, db_session)
+    project, product, service = _confirmed_project_with_service(db_session)
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "18.000",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "3000",
+        },
+    )
+
+    assert response.status_code == 400
+    assert db_session.query(Payment).count() == 0
+
+
+def test_cronograma_submit_rejects_value_above_max(client, db_session):
+    _logged_in(client, db_session)
+    project, product, service = _confirmed_project_with_service(db_session)
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "100000000",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "3000",
+        },
+    )
+
+    assert response.status_code == 400
+    assert db_session.query(Payment).count() == 0
+
+
+def test_cronograma_submit_total_matches_sum_of_rounded_allocations(client, db_session):
+    _logged_in(client, db_session)
+    project, product, service = _confirmed_project_with_service(db_session)
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "18000,555",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "3000,005",
+        },
+    )
+
+    # Both values have 3 decimal places, so both get rejected (max 2 allowed) -
+    # this also proves the total-vs-allocations-sum consistency check below
+    # never has a chance to run on bad data.
+    assert response.status_code == 400
+    assert db_session.query(Payment).count() == 0
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "18000,33",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "3000,33",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    payment = db_session.query(Payment).filter(Payment.project_id == project.id).one()
+    allocations = db_session.query(PaymentAllocation).filter(PaymentAllocation.payment_id == payment.id).all()
+    assert payment.total_amount == sum((a.amount for a in allocations), Decimal("0"))
+    assert payment.total_amount == Decimal("21000.66")
+
+
 def test_cronograma_submit_rejects_when_payment_already_exists(client, db_session):
     _logged_in(client, db_session)
     project, product, service = _confirmed_project_with_service(db_session)

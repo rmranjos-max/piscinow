@@ -11,7 +11,7 @@
     <div class="wrap">
       <h1>Pagamento do projeto</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
-      <p>Total: R$ {{ payment.total_amount }}</p>
+      <p>Total: R$ {{ payment.total_amount | brl }}</p>
       <table class="admin-table">
         <thead><tr><th>Destinat&aacute;rio</th><th>Fase</th><th>Valor</th></tr></thead>
         <tbody>
@@ -19,7 +19,7 @@
           <tr>
             <td>{{ recipient.name }}</td>
             <td>{{ allocation.stage.value | capitalize }}</td>
-            <td>R$ {{ allocation.amount }}</td>
+            <td>R$ {{ allocation.amount | brl }}</td>
           </tr>
         {% endfor %}
         </tbody>

@@ -1,6 +1,7 @@
 from piscinow.models.member import Member, MemberStatus, ProfileType
+from piscinow.models.payment import Payment
 from piscinow.models.product import Product, ProductKind
-from piscinow.models.project import Project
+from piscinow.models.project import Project, ProjectStatus
 
 
 def _comprador_logged_in(client, db_session, *, email="comprador@example.com", password="senha-forte-123"):
@@ -70,3 +71,41 @@ def test_escolher_produto_id_malformado_retorna_404(client, db_session):
     response = client.post("/comprador/projeto/produto", data={"product_id": "nao-e-um-uuid"})
 
     assert response.status_code == 404
+
+
+def test_projeto_shows_payment_link_when_confirmed_with_payment(client, db_session):
+    comprador = _comprador_logged_in(client, db_session)
+    loja = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul")
+    db_session.add(loja)
+    db_session.flush()
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra", price=18000)
+    db_session.add(product)
+    db_session.flush()
+    project = Project(member_id=comprador.id, product_id=product.id, status=ProjectStatus.CONFIRMADO)
+    db_session.add(project)
+    db_session.flush()
+    db_session.add(Payment(project_id=project.id, total_amount=18000))
+    db_session.flush()
+
+    response = client.get("/comprador/projeto")
+
+    assert response.status_code == 200
+    assert "/comprador/projeto/pagamento" in response.text
+
+
+def test_projeto_hides_payment_link_when_confirmed_without_payment(client, db_session):
+    comprador = _comprador_logged_in(client, db_session)
+    loja = Member(profile_type=ProfileType.LOJA, name="Studio Fibra Sul")
+    db_session.add(loja)
+    db_session.flush()
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra", price=18000)
+    db_session.add(product)
+    db_session.flush()
+    project = Project(member_id=comprador.id, product_id=product.id, status=ProjectStatus.CONFIRMADO)
+    db_session.add(project)
+    db_session.flush()
+
+    response = client.get("/comprador/projeto")
+
+    assert response.status_code == 200
+    assert "/comprador/projeto/pagamento" not in response.text

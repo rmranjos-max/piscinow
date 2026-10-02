@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -20,6 +21,17 @@ logger = logging.getLogger(__name__)
 _HERE = Path(__file__).resolve().parent
 
 TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"))
+
+
+def _format_brl(value) -> str:
+    """Format a monetary value with pt-BR thousands/decimal separators, e.g. 18000 -> "18.000,00"."""
+    quant = Decimal(str(value)).quantize(Decimal("0.01"))
+    whole, _, frac = f"{quant:,.2f}".partition(".")
+    whole = whole.replace(",", ".")
+    return f"{whole},{frac}"
+
+
+TEMPLATES.env.filters["brl"] = _format_brl
 
 
 @asynccontextmanager
@@ -43,6 +55,10 @@ def create_app() -> FastAPI:
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)
     app.state.payment_provider = FakePaymentProvider()
+    logger.warning(
+        "Pagamentos estao usando FakePaymentProvider: nenhuma cobranca ou repasse real esta "
+        "sendo processado. Configure um provider real antes de ir para producao."
+    )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(pages.router)

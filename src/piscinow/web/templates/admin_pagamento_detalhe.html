@@ -18,7 +18,7 @@
     <div class="wrap">
       <h1>Pagamento</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
-      <p>Status: {{ "Pago" if payment.status.value == "pago" else "Pendente" }} — Total: R$ {{ payment.total_amount }}</p>
+      <p>Status: {{ "Pago" if payment.status.value == "pago" else "Pendente" }} — Total: R$ {{ payment.total_amount | brl }}</p>
 
       {% for group in stages_data %}
       <h2 style="font-size:1.1rem; margin-top:20px;">
@@ -36,7 +36,7 @@
         {% for allocation, recipient in group.allocations %}
           <tr>
             <td>{{ recipient.name }}</td>
-            <td>R$ {{ allocation.amount }}</td>
+            <td>R$ {{ allocation.amount | brl }}</td>
             <td>{{ "Liberado" if allocation.status.value == "liberado" else "Retido" }}</td>
           </tr>
         {% endfor %}

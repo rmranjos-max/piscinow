@@ -38,7 +38,7 @@ def test_ver_pagamento_shows_cronograma(client, db_session):
     response = client.get("/comprador/projeto/pagamento")
 
     assert response.status_code == 200
-    assert "18000" in response.text
+    assert "18.000,00" in response.text
 
 
 def test_ver_pagamento_returns_404_when_no_payment_yet(client, db_session):

@@ -45,7 +45,7 @@ def test_pagamentos_hides_projects_that_already_have_payment(client, db_session)
 
     response = client.get("/admin/pagamentos")
 
-    assert "Ja Tem Pagamento" not in response.text
+    assert f"/admin/pagamentos/{project.id}/cronograma" not in response.text
 
 
 def test_pagamentos_hides_unconfirmed_projects(client, db_session):

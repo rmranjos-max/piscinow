@@ -1,8 +1,7 @@
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.payment import Payment, PaymentAllocation, PaymentStage
 from piscinow.models.product import Product, ProductKind
-from piscinow.models.project import Project, ProjectStatus
-from tests.web.test_comprador_projeto import _comprador_logged_in
+from tests.web.test_comprador_projeto import _comprador_logged_in, _confirm_project
 
 
 def _confirmed_project_with_payment(client, db_session):
@@ -13,9 +12,7 @@ def _confirmed_project_with_payment(client, db_session):
     product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra", price=18000)
     db_session.add(product)
     db_session.flush()
-    project = Project(member_id=comprador.id, product_id=product.id, status=ProjectStatus.CONFIRMADO)
-    db_session.add(project)
-    db_session.flush()
+    project = _confirm_project(db_session, comprador, product)
     payment = Payment(project_id=project.id, total_amount=18000)
     db_session.add(payment)
     db_session.flush()

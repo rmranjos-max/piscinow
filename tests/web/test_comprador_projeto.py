@@ -1,7 +1,21 @@
+from sqlalchemy import select
+
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.payment import Payment
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.project import Project, ProjectStatus
+
+
+def _confirm_project(db_session, comprador, product):
+    # O login segue o redirect para /comprador/projeto, que ja cria o rascunho do comprador.
+    project = db_session.scalar(select(Project).where(Project.member_id == comprador.id))
+    if project is None:
+        project = Project(member_id=comprador.id)
+        db_session.add(project)
+    project.product_id = product.id
+    project.status = ProjectStatus.CONFIRMADO
+    db_session.flush()
+    return project
 
 
 def _comprador_logged_in(client, db_session, *, email="comprador@example.com", password="senha-forte-123"):
@@ -81,9 +95,7 @@ def test_projeto_shows_payment_link_when_confirmed_with_payment(client, db_sessi
     product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra", price=18000)
     db_session.add(product)
     db_session.flush()
-    project = Project(member_id=comprador.id, product_id=product.id, status=ProjectStatus.CONFIRMADO)
-    db_session.add(project)
-    db_session.flush()
+    project = _confirm_project(db_session, comprador, product)
     db_session.add(Payment(project_id=project.id, total_amount=18000))
     db_session.flush()
 
@@ -101,9 +113,7 @@ def test_projeto_hides_payment_link_when_confirmed_without_payment(client, db_se
     product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra", price=18000)
     db_session.add(product)
     db_session.flush()
-    project = Project(member_id=comprador.id, product_id=product.id, status=ProjectStatus.CONFIRMADO)
-    db_session.add(project)
-    db_session.flush()
+    _confirm_project(db_session, comprador, product)
 
     response = client.get("/comprador/projeto")
 

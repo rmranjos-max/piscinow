@@ -171,6 +171,24 @@ def test_cronograma_submit_rejects_value_above_max(client, db_session):
     assert db_session.query(Payment).count() == 0
 
 
+def test_cronograma_submit_rejects_total_above_max_even_if_each_item_is_within_limit(client, db_session):
+    _logged_in(client, db_session)
+    project, product, service = _confirmed_project_with_service(db_session)
+
+    response = client.post(
+        f"/admin/pagamentos/{project.id}/cronograma",
+        data={
+            f"stage_product_{product.id}": "estrutura",
+            f"amount_product_{product.id}": "99999999,99",
+            f"stage_service_{service.id}": "acabamento",
+            f"amount_service_{service.id}": "99999999,99",
+        },
+    )
+
+    assert response.status_code == 400
+    assert db_session.query(Payment).count() == 0
+
+
 def test_cronograma_submit_total_matches_sum_of_rounded_allocations(client, db_session):
     _logged_in(client, db_session)
     project, product, service = _confirmed_project_with_service(db_session)

@@ -312,6 +312,12 @@ async def cronograma_submit(
                 {"stage": stage, "amount": amount, "recipient_member_id": service.member_id, "service_id": service.id}
             )
 
+    total = None
+    if not error:
+        total = sum((item["amount"] for item in allocations_data), Decimal("0")).quantize(Decimal("0.01"))
+        if total > MAX_PAYMENT_AMOUNT:
+            error = "A soma dos valores ultrapassa o limite permitido para um pagamento."
+
     if error:
         return templates.TemplateResponse(
             request,
@@ -320,7 +326,6 @@ async def cronograma_submit(
             status_code=400,
         )
 
-    total = sum((item["amount"] for item in allocations_data), Decimal("0")).quantize(Decimal("0.01"))
     payment = Payment(project_id=project.id, total_amount=total)
     db.add(payment)
     db.flush()

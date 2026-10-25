@@ -41,11 +41,14 @@ class MemoryStore:
         query: str,
         profile_type: ProfileType | None = None,
         limit: int = 5,
+        sources: tuple[MemorySource, ...] | None = None,
     ) -> list[MemoryItem]:
         self._session.flush()
         query_vector = embed_text(query)
         candidate_limit = max(limit * 4, 20)
         stmt = select(MemoryItem).where(MemoryItem.superseded_by.is_(None))
+        if sources is not None:
+            stmt = stmt.where(MemoryItem.source.in_(sources))
         if profile_type is not None:
             stmt = stmt.where(
                 (MemoryItem.profile_type == profile_type) | (MemoryItem.profile_type.is_(None))

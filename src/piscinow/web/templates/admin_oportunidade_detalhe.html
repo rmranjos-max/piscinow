@@ -1,0 +1,90 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, timeline, notice %}
+{% block title %}{{ deal.code if deal else "Comprador em atendimento" }}{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin/oportunidades">Oportunidades</a></p>
+<div class="row-between">
+  <h1>{{ deal.code ~ " · " if deal }}{{ buyer.name }}</h1>
+  {% if deal %}{{ badge(deal_status, "amber" if closed else "green") }}{% else %}{{ badge("Sem oportunidade ainda", "amber") }}{% endif %}
+</div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if qualification.attention_at %}
+<div class="notice" role="note">
+  <b>Pedido de atenção.</b> {{ qualification.attention_note }}
+  <form method="post" action="/admin/oportunidades/{{ qualification.id }}/atencao/resolver" class="shortcut-form">
+    <button class="mini-btn" type="submit">Marcar como resolvido</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="grid cols2">
+  <section class="card" aria-labelledby="contato">
+    <h2 id="contato">Contato do comprador</h2>
+    <p class="muted small">Visível só para a equipe. A loja não recebe estes dados antes do aceite de uma proposta.</p>
+    <ul class="plain-list">
+      <li><span>Nome</span><b>{{ buyer.name }}</b></li>
+      <li><span>E-mail</span><b>{{ buyer.email or "—" }}</b></li>
+      <li><span>Telefone</span><b>{{ buyer.phone or "—" }}</b></li>
+      <li><span>Região</span><b>{{ buyer.region or "—" }}</b></li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="briefing">
+    <div class="row-between">
+      <h2 id="briefing">Briefing</h2>
+      {% if qualification.consent.value == "concedido" %}{{ badge("Compartilhamento autorizado", "green") }}{% else %}{{ badge("Sem autorização", "amber") }}{% endif %}
+    </div>
+    <ul class="plain-list">
+      {% for row in briefing %}
+      <li>
+        <span>{{ row.label }}{% if row.source %} <small class="muted">({{ {"cliente": "comprador", "parceiro": "parceiro", "admin": "equipe"}[row.source] }})</small>{% endif %}</span>
+        <b>{% if row.value %}{% if row.choices %}{{ row.choices.get(row.value, row.value) }}{% else %}{{ row.value }}{% endif %}{% else %}—{% endif %}</b>
+      </li>
+      {% endfor %}
+    </ul>
+    <details class="shortcut">
+      <summary>Preencher ou corrigir um campo</summary>
+      <form method="post" action="/admin/oportunidades/{{ qualification.id }}/campo" class="correct-form">
+        <label for="campo-chave" class="visually-hidden">Campo</label>
+        <select id="campo-chave" name="key">
+          {% for key, label in field_keys.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+        </select>
+        <label for="campo-valor" class="visually-hidden">Valor</label>
+        <input id="campo-valor" name="value" type="text" maxlength="100" required placeholder="Valor (para listas, use o texto exibido)">
+        <button class="mini-btn" type="submit">Salvar</button>
+      </form>
+    </details>
+  </section>
+</div>
+
+{% if deal %}
+<section class="card" aria-labelledby="historico">
+  <h2 id="historico">Histórico</h2>
+  {{ timeline(events) }}
+  {% if closed and deal.lost_reason %}<p><b>Motivo:</b> {{ deal.lost_reason }}</p>{% endif %}
+</section>
+
+{% if not closed %}
+<section class="card" aria-labelledby="encerrar">
+  <h2 id="encerrar">Marcar como perdida</h2>
+  <form method="post" action="/admin/oportunidades/{{ qualification.id }}/perdida">
+    <div class="field">
+      <label for="motivo">Motivo (obrigatório)</label>
+      <textarea id="motivo" name="motivo" rows="2" maxlength="500" required></textarea>
+    </div>
+    <button class="btn" type="submit">Marcar como perdida</button>
+  </form>
+</section>
+{% endif %}
+{% endif %}
+
+<section class="card" aria-labelledby="conversa">
+  <h2 id="conversa">Conversa com a assistente</h2>
+  <ol class="chat-log">
+    {% for message in transcript %}
+    <li class="bubble {{ 'agent' if message.from_agent else 'user' }}"><span class="visually-hidden">{{ "Assistente" if message.from_agent else "Comprador" }}: </span>{{ message.text }}</li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

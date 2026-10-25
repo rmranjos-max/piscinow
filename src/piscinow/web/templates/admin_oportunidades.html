@@ -1,0 +1,54 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, empty %}
+{% block title %}Oportunidades{% endblock %}
+{% block content %}
+<p class="eyebrow">Comercial</p>
+<h1>Oportunidades</h1>
+<p class="sub">Compradores que concluíram o briefing e autorizaram o compartilhamento com as lojas.</p>
+
+<nav class="filter-tabs" aria-label="Filtrar por estado">
+  {% for key, label in filters.items() %}
+  <a href="/admin/oportunidades?estado={{ key }}"{% if key == estado %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if rows %}
+<div class="tablewrap"><table class="admin-table">
+  <thead><tr><th>Código</th><th>Comprador</th><th>Briefing</th><th>Estado</th><th>Criada em</th><th></th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td><b>{{ row.deal.code }}</b></td>
+      <td>{{ row.buyer.name }}{% if row.qualification.attention_at %} {{ badge("Precisa de atenção", "amber") }}{% endif %}</td>
+      <td>{{ row.summary }}</td>
+      <td>{{ badge(row.status, row.tone) }}</td>
+      <td>{{ row.deal.created_at.strftime("%d/%m/%Y") }}</td>
+      <td><a class="mini-btn" href="/admin/oportunidades/{{ row.qualification.id }}">Abrir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+{{ empty("Nenhuma oportunidade neste filtro.") }}
+{% endif %}
+
+{% if waiting %}
+<section aria-labelledby="aguardando">
+  <div class="section-head"><h2 id="aguardando">Aguardando ajuda da equipe</h2></div>
+  <p class="sub">A assistente não conseguiu completar o briefing destes compradores, ou precisou confirmar algo com vocês.</p>
+  <div class="tablewrap"><table class="admin-table">
+    <thead><tr><th>Comprador</th><th>Motivo</th><th>Briefing até agora</th><th></th></tr></thead>
+    <tbody>
+    {% for item in waiting %}
+      <tr>
+        <td>{{ item.buyer.name }}</td>
+        <td>{{ item.qualification.attention_note }}</td>
+        <td>{{ item.summary }}</td>
+        <td><a class="mini-btn" href="/admin/oportunidades/{{ item.qualification.id }}">Abrir</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endif %}
+{% endblock %}

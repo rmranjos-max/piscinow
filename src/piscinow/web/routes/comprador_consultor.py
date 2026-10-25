@@ -7,6 +7,7 @@ from piscinow.agent.memory_store import MemoryStore
 from piscinow.comprador_auth import require_comprador
 from piscinow.models.conversation import MessageRole
 from piscinow.models.member import Member, ProfileType
+from piscinow.models.memory import MemorySource
 from piscinow.models.qualification import ConsentState, FieldSource
 from piscinow.qualification.agent import ConsultorAgent
 from piscinow.qualification.fields import FIELDS, REQUIRED
@@ -29,7 +30,11 @@ BACK = "/comprador/consultor"
 
 def _knowledge_for(db: Session):
     def lookup(text: str) -> list[str]:
-        items = MemoryStore(db).search(query=text, profile_type=ProfileType.COMPRADOR, limit=4)
+        # Only what a person on the team approved: items learned automatically from conversations
+        # can hold text written by visitors, which must never reach another buyer's prompt.
+        items = MemoryStore(db).search(
+            query=text, profile_type=ProfileType.COMPRADOR, limit=4, sources=(MemorySource.HUMAN,)
+        )
         return [item.content for item in items]
 
     return lookup

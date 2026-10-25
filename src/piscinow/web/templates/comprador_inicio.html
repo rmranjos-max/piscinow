@@ -16,6 +16,15 @@
     {% if journey.next.href %}<a class="btn accent" href="{{ journey.next.href }}">{{ journey.next.cta }}</a>{% endif %}
   </section>
 
+  <section class="card" aria-labelledby="consultor">
+    <div class="row-between">
+      <h3 id="consultor">{{ consultor.title }}</h3>
+      {{ badge(consultor.badge, consultor.tone) }}
+    </div>
+    <p class="muted">{{ consultor.text }}</p>
+    <a class="btn" href="{{ consultor.href }}">{{ consultor.cta }}</a>
+  </section>
+
   <section class="card" aria-labelledby="seu-projeto">
     <div class="row-between">
       <h3 id="seu-projeto">Seu projeto</h3>

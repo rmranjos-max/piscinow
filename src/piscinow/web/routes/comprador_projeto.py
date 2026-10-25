@@ -17,7 +17,10 @@ from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import limiter, chat_rate_limit_string
 from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider, require_payments_enabled
-from piscinow.web.journey import comprador_journey, stage_overview
+from piscinow.qualification.deals import active_deal
+from piscinow.qualification.fields import FIELDS, REQUIRED
+from piscinow.qualification.service import find_qualification
+from piscinow.web.journey import comprador_journey, consultor_card, stage_overview
 
 router = APIRouter(prefix="/comprador")
 
@@ -75,11 +78,21 @@ async def inicio(
         all_released=bool(rows) and all(status == "liberado" for _, status, _, _ in rows),
     )
     first_name = (comprador.name or "").split()[0] if (comprador.name or "").strip() else ""
+    # Read-only like the rest of this page: the conversation itself only starts in the consultor.
+    qualification = find_qualification(db, comprador)
+    values = qualification.values() if qualification else {}
+    deal = active_deal(db, comprador.id)
+    consultor = consultor_card(
+        started=qualification is not None,
+        missing=[FIELDS[key].label for key in REQUIRED if key not in values],
+        consent=qualification.consent.value if qualification else "nao_respondido",
+        deal_code=deal.code if deal else None,
+    )
     return request.app.state.templates.TemplateResponse(
         request,
         "comprador_inicio.html",
         {"first_name": first_name, "project": project, "product": product, "services": services,
-         "payment": payment, "journey": journey},
+         "payment": payment, "journey": journey, "consultor": consultor},
     )
 
 

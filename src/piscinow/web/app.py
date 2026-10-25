@@ -20,6 +20,7 @@ from piscinow.web.origin_check import OriginCheckMiddleware
 from piscinow.web.sensitive_headers import SensitivePathHeadersMiddleware
 from piscinow.web.routes import (
     admin,
+    admin_oportunidades,
     chat,
     comprador,
     comprador_consultor,
@@ -116,6 +117,7 @@ def create_app() -> FastAPI:
     app.include_router(pages.router)
     app.include_router(chat.router)
     app.include_router(admin.router)
+    app.include_router(admin_oportunidades.router)
     app.include_router(loja.router)
     app.include_router(prestador.router)
     app.include_router(comprador.router)

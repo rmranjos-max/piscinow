@@ -90,3 +90,58 @@ def test_a_release_is_a_payout_not_a_statement_that_the_work_is_finished():
 
     assert "Repasse liberado" in labels
     assert not any("conclu" in label.lower() for label in labels)
+
+
+def test_a_comprador_who_never_talked_to_the_consultor_is_invited_to_start():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=False, missing=[], consent="nao_respondido", deal_code=None)
+
+    assert card["href"] == "/comprador/consultor"
+    assert card["cta"] == "Conversar com a assistente"
+    assert card["badge"] == "Não iniciado"
+
+
+def test_an_unfinished_briefing_says_what_is_still_missing():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=True, missing=["Prazo desejado"], consent="nao_respondido", deal_code=None)
+
+    assert "Prazo desejado" in card["text"]
+    assert card["cta"] == "Continuar a conversa"
+
+
+def test_a_complete_briefing_without_consent_asks_for_the_decision():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=True, missing=[], consent="nao_respondido", deal_code=None)
+
+    assert "autoriz" in card["text"].lower()
+    assert card["cta"] == "Revisar e autorizar"
+
+
+def test_a_declined_consent_can_still_be_given_later():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=True, missing=[], consent="recusado", deal_code=None)
+
+    assert card["cta"] == "Revisar e autorizar"
+
+
+def test_an_open_opportunity_shows_its_code_and_that_the_team_follows_it():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=True, missing=[], consent="concedido", deal_code="OP-0007")
+
+    assert "OP-0007" in card["text"]
+    assert card["tone"] == "green"
+    assert card["cta"] == "Ver o briefing"
+
+
+def test_an_authorized_briefing_without_an_active_opportunity_is_still_not_asked_again():
+    from piscinow.web.journey import consultor_card
+
+    card = consultor_card(started=True, missing=[], consent="concedido", deal_code=None)
+
+    assert card["cta"] == "Ver o briefing"
+    assert card["tone"] == "green"

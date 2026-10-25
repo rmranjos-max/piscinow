@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from piscinow.qualification.service import known_fields
-from piscinow.web.journey import comprador_journey, stage_overview
+from piscinow.web.journey import comprador_journey, consultor_card, stage_overview
 from piscinow.web.navigation import AREAS
 
 # Registered only in development (see create_app). Lists every shared component and every
@@ -38,6 +38,8 @@ PAGES = {
     "admin_lojas": ("admin_lojas.html", "admin", "/admin/lojas"),
     "admin_pagamentos": ("admin_pagamentos.html", "admin", "/admin/pagamentos"),
     "loja_produtos": ("loja_produtos.html", "loja", "/loja/produtos"),
+    "admin_oportunidades": ("admin_oportunidades.html", "admin", "/admin/oportunidades"),
+    "admin_oportunidade_detalhe": ("admin_oportunidade_detalhe.html", "admin", "/admin/oportunidades"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
     "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
@@ -99,6 +101,7 @@ def _example_context(name: str) -> dict:
             "services": [NS(), NS()],
             "payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")),
             "journey": comprador_journey(has_product=True, confirmed=True, payment_status="pago", all_released=False),
+            "consultor": consultor_card(started=True, missing=[], consent="concedido", deal_code="OP-0007"),
         }
     if name == "comprador_obra":
         rows = [
@@ -106,6 +109,48 @@ def _example_context(name: str) -> dict:
             ("acabamento", "retido", Decimal("3000.00"), "Instalações Sul"),
         ]
         return {"payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")), "stages": stage_overview(rows)}
+    if name == "admin_oportunidades":
+        filters = {"ativas": "Ativas", "todas": "Todas", "qualified": "Qualificada", "lost": "Perdida"}
+        row = lambda n, buyer, summary, status, tone="", attention=False: {  # noqa: E731
+            "deal": NS(code=f"OP-{n:04d}", created_at=now - timedelta(days=n)),
+            "buyer": NS(name=buyer), "qualification": NS(id=uid(60 + n), attention_at=now if attention else None),
+            "status": status, "tone": tone, "summary": summary,
+        }
+        return {
+            "filters": filters, "estado": "ativas",
+            "rows": [
+                row(7, "Marina Duarte", "Fibra · Valinhos · Até 90 dias", "Qualificada", attention=True),
+                row(6, "Carlos Souza", "Alvenaria · Campinas · Até 6 meses", "Em análise pela loja"),
+                row(4, "Ana Lima", "Vinil · Vinhedo · Sem prazo definido", "Proposta enviada"),
+            ],
+            "waiting": [
+                {"buyer": NS(name="Paulo Ribeiro"), "summary": "Fibra",
+                 "qualification": NS(id=uid(90), attention_note="Sem resposta após 3 perguntas: Localização")},
+            ],
+        }
+    if name == "admin_oportunidade_detalhe":
+        field = lambda key, value, source="cliente": NS(  # noqa: E731
+            key=key, value=value, source=NS(value=source), verification=NS(value="declarado")
+        )
+        qualification = NS(
+            id=uid(67), attention_at=now, attention_note="Dúvida do comprador: quer saber o prazo de entrega de fibra",
+            consent=NS(value="concedido"),
+            fields=[field("localizacao", "Valinhos"), field("tipo_piscina", "fibra"), field("prazo", "ate_90_dias"),
+                    field("dimensoes", "7 x 3 m", "admin")],
+        )
+        return {
+            "qualification": qualification,
+            "buyer": NS(name="Marina Duarte", email="marina@exemplo.com.br", phone="(19) 99999-0000", region="Campinas"),
+            "deal": NS(code="OP-0007", lost_reason=None), "deal_status": "Qualificada", "closed": False,
+            "briefing": known_fields(qualification),
+            "events": [{"title": "Oportunidade criada", "detail": f"{now:%d/%m/%Y %H:%M} · sistema"}],
+            "transcript": [
+                {"from_agent": True, "text": "Oi, Marina! Eu sou a assistente virtual da Piscinow. Em que cidade fica o terreno?"},
+                {"from_agent": False, "text": "Valinhos. Fibra, uns 7 por 3."},
+            ],
+            "field_keys": {"localizacao": "Localização", "prazo": "Prazo desejado"},
+            "error": None,
+        }
     if name in ("comprador_consultor", "comprador_consultor_completo"):
         complete = name.endswith("completo")
         field = lambda key, value, source="cliente", verification="declarado": NS(  # noqa: E731

@@ -53,6 +53,26 @@ def comprador_journey(*, has_product: bool, confirmed: bool, payment_status: str
     return {"steps": steps, "next": {"title": title, "text": text, "href": href, "cta": cta}}
 
 
+def consultor_card(*, started: bool, missing: list[str], consent: str, deal_code: str | None) -> dict:
+    """The home-page card about the briefing and the opportunity. Says only what the data says."""
+    href = "/comprador/consultor"
+    if not started:
+        return {"badge": "Não iniciado", "tone": "", "title": "Conte o que você imagina",
+                "text": "Converse com a nossa assistente. Em poucos minutos ela monta o briefing que as lojas do Clube recebem.",
+                "href": href, "cta": "Conversar com a assistente"}
+    if consent == "concedido":
+        text = (f"A oportunidade {deal_code} está com a nossa equipe, que avisa as lojas compatíveis."
+                if deal_code else "Você autorizou o compartilhamento e a nossa equipe está acompanhando.")
+        return {"badge": "Em acompanhamento", "tone": "green", "title": "Seu briefing foi compartilhado",
+                "text": text, "href": href, "cta": "Ver o briefing"}
+    if missing:
+        return {"badge": "Em construção", "tone": "amber", "title": "Seu briefing está em andamento",
+                "text": "Ainda falta: " + ", ".join(missing) + ".", "href": href, "cta": "Continuar a conversa"}
+    return {"badge": "Falta a sua decisão", "tone": "amber", "title": "Seu briefing está pronto",
+            "text": "Falta só você decidir se autoriza compartilhar o briefing, sem nome e sem contato, com lojas compatíveis.",
+            "href": href, "cta": "Revisar e autorizar"}
+
+
 def stage_overview(rows) -> list[dict]:
     """rows: (stage, allocation status, amount, recipient name). One entry per fixed stage.
 

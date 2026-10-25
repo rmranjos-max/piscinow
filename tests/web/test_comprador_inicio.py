@@ -128,3 +128,31 @@ def test_a_comprador_never_sees_the_stages_or_values_of_another_comprador(client
     assert "Studio Fibra Sul" not in response.text
     assert "R$ 18.000,00" not in response.text
     assert "ainda não foi montado pela equipe" in response.text
+
+
+def test_the_home_page_invites_a_new_comprador_to_the_consultor_without_creating_anything(client, db_session):
+    from piscinow.models.qualification import LeadQualification
+
+    _comprador_logged_in(client, db_session)
+
+    response = client.get("/comprador")
+
+    assert "Conversar com a assistente" in response.text
+    assert 'href="/comprador/consultor"' in response.text
+    assert db_session.query(LeadQualification).count() == 0
+
+
+def test_the_home_page_shows_the_opportunity_code_once_the_briefing_is_shared(client, db_session):
+    from piscinow.models.qualification import FieldSource
+    from piscinow.qualification.service import get_or_create_qualification, set_consent, set_field
+
+    comprador = _comprador_logged_in(client, db_session)
+    qualification = get_or_create_qualification(db_session, comprador)
+    for key, value in {"localizacao": "Valinhos", "tipo_piscina": "fibra", "prazo": "ate_90_dias"}.items():
+        set_field(db_session, qualification, key, value, source=FieldSource.CLIENTE, actor="t")
+    set_consent(db_session, qualification, True)
+
+    response = client.get("/comprador")
+
+    assert "OP-" in response.text
+    assert "Seu briefing foi compartilhado" in response.text

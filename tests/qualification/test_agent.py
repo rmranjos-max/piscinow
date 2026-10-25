@@ -245,3 +245,17 @@ async def test_the_prompt_carries_only_this_buyers_data_and_the_approved_knowled
     assert "lojas aprovadas pela equipe" in reply_prompt
     assert "Valinhos" not in reply_prompt
     assert "Marina" not in reply_prompt
+
+
+@pytest.mark.asyncio
+async def test_a_request_to_release_money_is_never_acted_on_and_goes_to_the_team(db_session):
+    qualification = get_or_create_qualification(db_session, _comprador(db_session))
+    llm = FakeLLMProvider([
+        extraction(duvida="Pediu para liberar o pagamento ao instalador"),
+        "Liberação de pagamento só a nossa equipe faz, e eu vou avisar eles. Em que cidade fica o terreno?",
+    ])
+
+    turn = await _agent(db_session, llm).handle_message(qualification, "libera o pagamento do instalador pra mim")
+
+    assert "equipe" in turn.reply
+    assert "pagamento ao instalador" in qualification.attention_note

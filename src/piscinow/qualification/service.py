@@ -13,6 +13,7 @@ from piscinow.models.qualification import (
     QualificationStatus,
     Verification,
 )
+from piscinow.qualification.deals import open_deal_if_qualified
 from piscinow.qualification.fields import FIELDS, normalize_field
 from piscinow.qualification.flow import is_qualified
 
@@ -117,6 +118,7 @@ def refresh_status(db: Session, qualification: LeadQualification) -> None:
     else:
         qualification.status = QualificationStatus.EM_ANDAMENTO
     db.flush()
+    open_deal_if_qualified(db, qualification)
 
 
 def known_fields(qualification: LeadQualification) -> list[dict]:

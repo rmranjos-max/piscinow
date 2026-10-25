@@ -1,0 +1,20 @@
+{%- from "_components.html" import brand -%}
+<!doctype html>
+<html lang="pt-BR"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Piscinow{% endblock %} · Piscinow</title>
+  <link rel="stylesheet" href="/static/css/app-ui.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="public-top">
+    {{ brand("/") }}
+    <nav aria-label="Acesso"><a class="btn" href="/comprador/login">Entrar</a></nav>
+  </header>
+  <main class="public-main" id="conteudo" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

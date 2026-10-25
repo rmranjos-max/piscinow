@@ -99,6 +99,9 @@ PAGES = {
     "admin_pagamentos": ("Projetos aguardando cronograma", "/admin/pagamentos"),
     "loja_produtos": ("Meus produtos", "/loja/produtos"),
     "comprador_pagamento": ("Pagamento do projeto", "/comprador/projeto"),
+    "comprador_inicio": ("Olá, Marina.", "/comprador"),
+    "comprador_obra": ("Acompanhar obra", "/comprador/obra"),
+    "vitrine_produtos_comprador": ("Produtos", "/vitrine/produtos"),
 }
 
 
@@ -132,3 +135,39 @@ def test_the_gallery_can_force_the_dark_or_light_theme_for_review(client):
     assert 'data-theme="dark"' in client.get("/_galeria?tema=escuro").text
     assert 'data-theme="light"' in client.get("/_galeria?tema=claro").text
     assert "data-theme" not in client.get("/_galeria").text
+
+
+def test_the_vitrine_for_a_visitor_uses_the_public_layout_and_shows_no_price_or_buy_action(client):
+    html = client.get("/_galeria/pagina/vitrine_produtos_visitante").text
+
+    assert "<h1>Produtos</h1>" in html
+    assert 'class="public-top"' in html and 'href="/comprador/login"' in html
+    assert 'class="sidebar"' not in html
+    assert "18.000,00" not in html and "18000" not in html
+    assert "Pre&ccedil;o" not in html and "Escolher" not in html
+    assert "Entrar para ver pre&ccedil;o e montar projeto" in html
+
+
+def test_the_vitrine_for_a_comprador_shows_the_price_and_the_choose_action_inside_the_app(client):
+    html = client.get("/_galeria/pagina/vitrine_produtos_comprador").text
+
+    assert 'class="sidebar"' in html
+    assert "R$ 18.000,00" in html and "Escolher" in html
+
+
+def test_the_comprador_home_shows_the_real_next_step_and_the_project_summary(client):
+    html = client.get("/_galeria/pagina/comprador_inicio").text
+
+    assert "Acompanhe os repasses" in html
+    assert "Piscina de fibra 7 x 3" in html
+    assert "R$ 21.000,00" in html
+    assert html.count('aria-current="step"') == 1
+
+
+def test_the_stage_tracking_page_shows_the_four_stages_and_never_calls_a_payout_a_finished_work(client):
+    html = client.get("/_galeria/pagina/comprador_obra").text
+
+    for label in ["Terraplanagem", "Estrutura", "Revestimento", "Acabamento"]:
+        assert label in html
+    assert "Repasse liberado" in html and "Valor retido" in html
+    assert "conclu" not in html.lower()

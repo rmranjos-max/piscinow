@@ -1,0 +1,51 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, stepper %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<p class="eyebrow">Seu espaço</p>
+<h1>Olá, {{ first_name }}.</h1>
+<p class="sub">Aqui você acompanha o seu projeto de piscina do começo ao fim.</p>
+
+{{ stepper(journey.steps) }}
+
+<div class="grid cols2">
+  <section class="card next-step cta-card" aria-labelledby="proximo">
+    {{ badge("Próximo passo") }}
+    <h2 id="proximo">{{ journey.next.title }}</h2>
+    <p>{{ journey.next.text }}</p>
+    {% if journey.next.href %}<a class="btn accent" href="{{ journey.next.href }}">{{ journey.next.cta }}</a>{% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="seu-projeto">
+    <div class="row-between">
+      <h3 id="seu-projeto">Seu projeto</h3>
+      {% if project %}{{ badge("Confirmado" if project.status.value == "confirmado" else "Rascunho", "green" if project.status.value == "confirmado" else "amber") }}{% endif %}
+    </div>
+    {% if product %}
+      <p><b>{{ product.name }}</b><br><span class="muted">{{ product.category }}</span></p>
+      <p class="muted">{{ services|length }} serviço{{ "" if services|length == 1 else "s" }} no projeto</p>
+      <a class="btn" href="/comprador/projeto">Ver projeto</a>
+    {% else %}
+      <p class="empty-note">Você ainda não escolheu um produto.</p>
+      <a class="btn" href="/vitrine/produtos">Explorar produtos</a>
+    {% endif %}
+  </section>
+
+  {% if payment %}
+  <section class="card" aria-labelledby="pagamento">
+    <div class="row-between">
+      <h3 id="pagamento">Pagamento</h3>
+      {{ badge("Pago" if payment.status.value == "pago" else "Pendente", "green" if payment.status.value == "pago" else "amber") }}
+    </div>
+    <p>Total do projeto: <b>R$ {{ payment.total_amount | brl }}</b></p>
+    <a class="btn" href="/comprador/projeto/pagamento">Ver pagamento</a>
+  </section>
+  {% endif %}
+
+  <section class="card" aria-labelledby="obra">
+    <h3 id="obra">Acompanhar obra</h3>
+    <p class="muted">Veja em que fase está o repasse de cada parte do seu projeto.</p>
+    <a class="btn" href="/comprador/obra">Acompanhar fases</a>
+  </section>
+</div>
+{% endblock %}

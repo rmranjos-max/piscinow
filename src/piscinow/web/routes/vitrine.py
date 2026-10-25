@@ -12,6 +12,14 @@ from piscinow.web.deps import get_db
 router = APIRouter(prefix="/vitrine")
 
 
+def _layout(request: Request, comprador: Member | None) -> str:
+    # A logged-in buyer browses inside the app (with the menu); a visitor gets the public layout.
+    if comprador is not None:
+        request.scope["shell_area"] = "comprador"
+        return "app_shell.html"
+    return "public_shell.html"
+
+
 def _optional_comprador(request: Request, db: Session = Depends(get_db)) -> Member | None:
     member_id = request.session.get(COMPRADOR_SESSION_KEY)
     if not member_id:
@@ -44,7 +52,8 @@ async def vitrine_produtos(
     return templates.TemplateResponse(
         request,
         "vitrine_produtos.html",
-        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador},
+        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador,
+         "layout": _layout(request, comprador)},
     )
 
 
@@ -70,5 +79,6 @@ async def vitrine_servicos(
     return templates.TemplateResponse(
         request,
         "vitrine_servicos.html",
-        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador},
+        {"items": items, "kind": kind, "category": category, "regiao": regiao, "comprador": comprador,
+         "layout": _layout(request, comprador)},
     )

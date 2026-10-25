@@ -1,75 +1,73 @@
-{% extends "base.html" %}
+{% extends layout %}
+{% block title %}Servi&ccedil;os{% endblock %}
 {% block content %}
-<header class="site">
-  <div class="wrap nav-row">
-    <a class="brand" href="/">Piscinow <span class="badge">Clube</span></a>
-  </div>
-</header>
-<main>
-  <section class="block">
-    <div class="wrap">
-      <h1>Servi&ccedil;os</h1>
-      <form method="get" action="/vitrine/servicos">
-        <div class="field">
-          <label for="kind">Tipo</label>
-          <select id="kind" name="kind">
-            <option value="">Todos</option>
-            <option value="instalacao" {% if kind == "instalacao" %}selected{% endif %}>Instala&ccedil;&atilde;o</option>
-            <option value="manutencao" {% if kind == "manutencao" %}selected{% endif %}>Manuten&ccedil;&atilde;o</option>
-            <option value="reparo" {% if kind == "reparo" %}selected{% endif %}>Reparo</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="category">Categoria</label>
-          <input id="category" type="text" name="category" value="{{ category }}">
-        </div>
-        <div class="field">
-          <label for="regiao">Regi&atilde;o</label>
-          <input id="regiao" type="text" name="regiao" value="{{ regiao }}">
-        </div>
-        <button class="btn" type="submit">Filtrar</button>
-      </form>
+<p class="eyebrow">Vitrine</p>
+<h1>Servi&ccedil;os</h1>
+<p class="sub">Instala&ccedil;&atilde;o, manuten&ccedil;&atilde;o e reparo por prestadores homologados{% if not comprador %}. Os valores aparecem depois que voc&ecirc; entra{% endif %}.</p>
 
-      {% if items %}
-      <table class="admin-table">
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Prestador</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
-        <tbody>
-        {% for item in items %}
-          <tr>
-            <td>{{ item.service.name }}</td>
-            <td>{{ item.service.category }}</td>
-            <td>{{ item.prestador.name }}</td>
-            <td>{{ item.prestador.region or "-" }}</td>
-            {% if comprador %}
-            <td>
-              {% if item.service.price_min and item.service.price_max %}
-                R$ {{ item.service.price_min }} - R$ {{ item.service.price_max }}
-              {% elif item.service.price_min %}
-                a partir de R$ {{ item.service.price_min }}
-              {% elif item.service.price_max %}
-                at&eacute; R$ {{ item.service.price_max }}
-              {% else %}
-                A combinar
-              {% endif %}
-            </td>
-            <td>
-              <form method="post" action="/comprador/projeto/servicos/{{ item.service.id }}/adicionar">
-                <button class="mini-btn" type="submit">Adicionar</button>
-              </form>
-            </td>
-            {% endif %}
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p class="empty-note">Nenhum servi&ccedil;o encontrado.</p>
-      {% endif %}
-
-      {% if not comprador %}
-      <p><a href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a></p>
-      {% endif %}
+<form method="get" action="/vitrine/servicos" class="card">
+  <div class="filters">
+    <div class="field">
+      <label for="kind">Tipo</label>
+      <select id="kind" name="kind">
+        <option value="">Todos</option>
+        <option value="instalacao" {% if kind == "instalacao" %}selected{% endif %}>Instala&ccedil;&atilde;o</option>
+        <option value="manutencao" {% if kind == "manutencao" %}selected{% endif %}>Manuten&ccedil;&atilde;o</option>
+        <option value="reparo" {% if kind == "reparo" %}selected{% endif %}>Reparo</option>
+      </select>
     </div>
-  </section>
-</main>
+    <div class="field">
+      <label for="category">Categoria</label>
+      <input id="category" type="text" name="category" value="{{ category }}">
+    </div>
+    <div class="field">
+      <label for="regiao">Regi&atilde;o</label>
+      <input id="regiao" type="text" name="regiao" value="{{ regiao }}">
+    </div>
+    <button class="btn accent" type="submit">Filtrar</button>
+  </div>
+</form>
+
+{% if items %}
+<div class="tablewrap"><table class="admin-table">
+  <thead><tr><th>Nome</th><th>Categoria</th><th>Prestador</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for item in items %}
+    <tr>
+      <td>{{ item.service.name }}</td>
+      <td>{{ item.service.category }}</td>
+      <td>{{ item.prestador.name }}</td>
+      <td>{{ item.prestador.region or "-" }}</td>
+      {% if comprador %}
+      <td>
+        {% if item.service.price_min and item.service.price_max %}
+          R$ {{ item.service.price_min | brl }} - R$ {{ item.service.price_max | brl }}
+        {% elif item.service.price_min %}
+          a partir de R$ {{ item.service.price_min | brl }}
+        {% elif item.service.price_max %}
+          at&eacute; R$ {{ item.service.price_max | brl }}
+        {% else %}
+          A combinar
+        {% endif %}
+      </td>
+      <td>
+        <form method="post" action="/comprador/projeto/servicos/{{ item.service.id }}/adicionar">
+          <button class="mini-btn" type="submit">Adicionar</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<p class="empty-note">Nenhum servi&ccedil;o encontrado.</p>
+{% endif %}
+
+{% if not comprador %}
+<div class="card cta-card">
+  <p>Quer ver os valores e montar o seu projeto?</p>
+  <a class="btn accent" href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a>
+</div>
+{% endif %}
 {% endblock %}

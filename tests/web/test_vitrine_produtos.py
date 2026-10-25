@@ -101,7 +101,7 @@ def test_vitrine_produtos_shows_price_and_choose_button_when_logged_in(client, d
 
     response = client.get("/vitrine/produtos")
 
-    assert "18000" in response.text
+    assert "18.000,00" in response.text
     assert "Escolher" in response.text
 
 
@@ -115,5 +115,5 @@ def test_vitrine_produtos_hides_price_when_not_logged_in(client, db_session):
 
     response = client.get("/vitrine/produtos")
 
-    assert "18000" not in response.text
+    assert "18000" not in response.text and "18.000,00" not in response.text
     assert "Escolher" not in response.text

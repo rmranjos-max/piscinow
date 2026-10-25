@@ -1,65 +1,63 @@
-{% extends "base.html" %}
+{% extends layout %}
+{% block title %}Produtos{% endblock %}
 {% block content %}
-<header class="site">
-  <div class="wrap nav-row">
-    <a class="brand" href="/">Piscinow <span class="badge">Clube</span></a>
-  </div>
-</header>
-<main>
-  <section class="block">
-    <div class="wrap">
-      <h1>Produtos</h1>
-      <form method="get" action="/vitrine/produtos">
-        <div class="field">
-          <label for="kind">Tipo</label>
-          <select id="kind" name="kind">
-            <option value="">Todos</option>
-            <option value="piscina" {% if kind == "piscina" %}selected{% endif %}>Piscina</option>
-            <option value="equipamento" {% if kind == "equipamento" %}selected{% endif %}>Equipamento</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="category">Categoria</label>
-          <input id="category" type="text" name="category" value="{{ category }}">
-        </div>
-        <div class="field">
-          <label for="regiao">Regi&atilde;o</label>
-          <input id="regiao" type="text" name="regiao" value="{{ regiao }}">
-        </div>
-        <button class="btn" type="submit">Filtrar</button>
-      </form>
+<p class="eyebrow">Vitrine</p>
+<h1>Produtos</h1>
+<p class="sub">Piscinas e equipamentos das lojas parceiras{% if not comprador %}. Os valores aparecem depois que você entra{% endif %}.</p>
 
-      {% if items %}
-      <table class="admin-table">
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Loja</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
-        <tbody>
-        {% for item in items %}
-          <tr>
-            <td>{{ item.product.name }}</td>
-            <td>{{ item.product.category }}</td>
-            <td>{{ item.loja.name }}</td>
-            <td>{{ item.loja.region or "-" }}</td>
-            {% if comprador %}
-            <td>R$ {{ item.product.price }}</td>
-            <td>
-              <form method="post" action="/comprador/projeto/produto">
-                <input type="hidden" name="product_id" value="{{ item.product.id }}">
-                <button class="mini-btn" type="submit">Escolher</button>
-              </form>
-            </td>
-            {% endif %}
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p class="empty-note">Nenhum produto encontrado.</p>
-      {% endif %}
-
-      {% if not comprador %}
-      <p><a href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a></p>
-      {% endif %}
+<form method="get" action="/vitrine/produtos" class="card">
+  <div class="filters">
+    <div class="field">
+      <label for="kind">Tipo</label>
+      <select id="kind" name="kind">
+        <option value="">Todos</option>
+        <option value="piscina" {% if kind == "piscina" %}selected{% endif %}>Piscina</option>
+        <option value="equipamento" {% if kind == "equipamento" %}selected{% endif %}>Equipamento</option>
+      </select>
     </div>
-  </section>
-</main>
+    <div class="field">
+      <label for="category">Categoria</label>
+      <input id="category" type="text" name="category" value="{{ category }}">
+    </div>
+    <div class="field">
+      <label for="regiao">Regi&atilde;o</label>
+      <input id="regiao" type="text" name="regiao" value="{{ regiao }}">
+    </div>
+    <button class="btn accent" type="submit">Filtrar</button>
+  </div>
+</form>
+
+{% if items %}
+<div class="tablewrap"><table class="admin-table">
+  <thead><tr><th>Nome</th><th>Categoria</th><th>Loja</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for item in items %}
+    <tr>
+      <td>{{ item.product.name }}</td>
+      <td>{{ item.product.category }}</td>
+      <td>{{ item.loja.name }}</td>
+      <td>{{ item.loja.region or "-" }}</td>
+      {% if comprador %}
+      <td>R$ {{ item.product.price | brl }}</td>
+      <td>
+        <form method="post" action="/comprador/projeto/produto">
+          <input type="hidden" name="product_id" value="{{ item.product.id }}">
+          <button class="mini-btn" type="submit">Escolher</button>
+        </form>
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<p class="empty-note">Nenhum produto encontrado.</p>
+{% endif %}
+
+{% if not comprador %}
+<div class="card cta-card">
+  <p>Quer ver os valores e montar o seu projeto?</p>
+  <a class="btn accent" href="/comprador/login">Entrar para ver pre&ccedil;o e montar projeto</a>
+</div>
+{% endif %}
 {% endblock %}

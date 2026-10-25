@@ -17,6 +17,7 @@ from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import limiter, chat_rate_limit_string
 from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider, require_payments_enabled
+from piscinow.web.journey import comprador_journey, stage_overview
 
 router = APIRouter(prefix="/comprador")
 
@@ -37,6 +38,60 @@ def _project_services(db: Session, project_id) -> list[Service]:
             .join(ProjectService, ProjectService.service_id == Service.id)
             .where(ProjectService.project_id == project_id)
         )
+    )
+
+
+def _read_only_overview(db: Session, comprador: Member):
+    """Project, product, services, payment and stage rows of a comprador, without creating anything."""
+    project = db.scalar(select(Project).where(Project.member_id == comprador.id))
+    if project is None:
+        return None, None, [], None, []
+    product = db.get(Product, project.product_id) if project.product_id else None
+    services = _project_services(db, project.id)
+    payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    rows = []
+    if payment is not None:
+        for allocation, recipient in db.execute(
+            select(PaymentAllocation, Member)
+            .join(Member, PaymentAllocation.recipient_member_id == Member.id)
+            .where(PaymentAllocation.payment_id == payment.id)
+        ):
+            rows.append((allocation.stage.value, allocation.status.value, allocation.amount, recipient.name))
+    return project, product, services, payment, rows
+
+
+@router.get("", response_class=HTMLResponse)
+async def inicio(
+    request: Request,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    # Opening the home page never creates a draft project: that only happens in "Meu projeto".
+    project, product, services, payment, rows = _read_only_overview(db, comprador)
+    journey = comprador_journey(
+        has_product=product is not None,
+        confirmed=project is not None and project.status == ProjectStatus.CONFIRMADO,
+        payment_status=payment.status.value if payment else None,
+        all_released=bool(rows) and all(status == "liberado" for _, status, _, _ in rows),
+    )
+    first_name = (comprador.name or "").split()[0] if (comprador.name or "").strip() else ""
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "comprador_inicio.html",
+        {"first_name": first_name, "project": project, "product": product, "services": services,
+         "payment": payment, "journey": journey},
+    )
+
+
+@router.get("/obra", response_class=HTMLResponse)
+async def obra(
+    request: Request,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    _, _, _, payment, rows = _read_only_overview(db, comprador)
+    return request.app.state.templates.TemplateResponse(
+        request, "comprador_obra.html", {"payment": payment, "stages": stage_overview(rows)}
     )
 
 

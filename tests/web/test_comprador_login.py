@@ -19,7 +19,7 @@ def test_login_with_correct_credentials_redirects_to_projeto(client, db_session)
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/comprador/projeto"
+    assert response.headers["location"] == "/comprador"
 
 
 def test_login_with_wrong_password_shows_error(client, db_session):

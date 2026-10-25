@@ -1,0 +1,35 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, notice %}
+{% block title %}Acompanhar obra{% endblock %}
+{% block content %}
+<p class="eyebrow">Acompanhamento</p>
+<h1>Acompanhar obra</h1>
+<p class="sub">As quatro fases do cronograma de pagamento do seu projeto.</p>
+
+{% if not payment %}
+{{ notice("O cronograma de pagamento ainda não foi montado pela equipe. As fases aparecem aqui depois disso.") }}
+{% endif %}
+
+<div class="grid cols2">
+  {% for stage in stages %}
+  <section class="card" aria-labelledby="fase-{{ stage.key }}">
+    <div class="row-between">
+      <h2 id="fase-{{ stage.key }}">{{ "%02d"|format(loop.index) }} · {{ stage.label }}</h2>
+      {{ badge(stage.state_label, stage.tone) }}
+    </div>
+    {% if stage.lines %}
+    <ul class="plain-list">
+      {% for item in stage.lines %}
+      <li><span>{{ item.name }}{% if item.released %} <small>(liberado)</small>{% endif %}</span><span>R$ {{ item.amount | brl }}</span></li>
+      {% endfor %}
+    </ul>
+    <p class="stage-total">Total da fase: R$ {{ stage.total | brl }}</p>
+    {% else %}
+    <p class="muted">Nenhum item foi atribuído a esta fase.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+{{ notice("Aqui você vê o repasse do valor a cada fase. O registro da execução da obra, com fotos e confirmações, ainda não está disponível.") }}
+{% endblock %}

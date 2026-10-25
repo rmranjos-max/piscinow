@@ -107,8 +107,8 @@ def test_vitrine_servicos_shows_price_and_add_button_when_logged_in(client, db_s
 
     response = client.get("/vitrine/servicos")
 
-    assert "3000" in response.text
-    assert "8000" in response.text
+    assert "3.000,00" in response.text
+    assert "8.000,00" in response.text
     assert "Adicionar" in response.text
 
 
@@ -129,6 +129,6 @@ def test_vitrine_servicos_hides_price_when_not_logged_in(client, db_session):
 
     response = client.get("/vitrine/servicos")
 
-    assert "3000" not in response.text
-    assert "8000" not in response.text
+    assert "3000" not in response.text and "3.000,00" not in response.text
+    assert "8000" not in response.text and "8.000,00" not in response.text
     assert "Adicionar" not in response.text

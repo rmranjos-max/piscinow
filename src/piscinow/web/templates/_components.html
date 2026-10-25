@@ -10,6 +10,8 @@
   {%- elif name == "book" %}<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 8h7"/>
   {%- elif name == "box" %}<path d="M12 3l8 4v10l-8 4-8-4V7z M4 7l8 4 8-4 M12 11v10"/>
   {%- elif name == "compass" %}<path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M15.5 8.5l-2 5-5 2 2-5z"/>
+  {%- elif name == "home" %}<path d="M4 11l8-7 8 7v9H4z M10 20v-6h4v6"/>
+  {%- elif name == "flag" %}<path d="M5 21V4 M5 4h11l-2 4 2 4H5"/>
   {%- elif name == "folder" %}<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
   {%- endif %}
 </svg>
@@ -51,4 +53,8 @@
 
 {% macro empty(text) -%}
 <p class="empty-note" data-component="empty">{{ text }}</p>
+{%- endmacro %}
+
+{% macro brand(href) -%}
+<a class="brand" href="{{ href }}" aria-label="Piscinow, ir para o início"><span class="brand-mark" aria-hidden="true">≈</span><span class="brand-text">pisci<span>now</span></span></a>
 {%- endmacro %}

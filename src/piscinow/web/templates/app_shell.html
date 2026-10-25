@@ -1,4 +1,4 @@
-{%- from "_components.html" import icon, badge -%}
+{%- from "_components.html" import icon, badge, brand -%}
 <!doctype html>
 <html lang="pt-BR"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 <head>
@@ -11,7 +11,7 @@
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
   <div class="app">
     <aside class="sidebar">
-      <a class="brand" href="{{ shell.home }}" aria-label="Piscinow, ir para o início"><span class="brand-mark" aria-hidden="true">≈</span><span class="brand-text">pisci<span>now</span></span></a>
+      {{ brand(shell.home) }}
       <p class="side-label">{{ shell.label }}</p>
       <nav class="nav" aria-label="Menu principal">
         {% for item in shell['items'] %}

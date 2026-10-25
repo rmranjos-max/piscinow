@@ -6,6 +6,7 @@ class NavItem:
     label: str
     href: str
     icon: str
+    exact: bool = False
 
 
 @dataclass(frozen=True)
@@ -55,12 +56,14 @@ AREAS: dict[str, Area] = {
         key="comprador",
         label="Comprador",
         prefix="/comprador",
-        home="/comprador/projeto",
+        home="/comprador",
         logout="/comprador/logout",
         items=(
-            NavItem("Meu projeto", "/comprador/projeto", "folder"),
+            NavItem("Início", "/comprador", "home", exact=True),
             NavItem("Explorar produtos", "/vitrine/produtos", "compass"),
             NavItem("Explorar serviços", "/vitrine/servicos", "wrench"),
+            NavItem("Meu projeto", "/comprador/projeto", "folder"),
+            NavItem("Acompanhar obra", "/comprador/obra", "flag"),
         ),
     ),
 }
@@ -75,13 +78,15 @@ def area_for_path(path: str) -> Area | None:
     return None
 
 
-def _is_active(href: str, path: str) -> bool:
-    return path == href or path.startswith(href + "/")
+def _is_active(item: NavItem, path: str) -> bool:
+    if item.exact:
+        return path.rstrip("/") == item.href
+    return path == item.href or path.startswith(item.href + "/")
 
 
 def nav_items_for(area: Area, path: str) -> list[dict]:
     return [
-        {"label": item.label, "href": item.href, "icon": item.icon, "active": _is_active(item.href, path)}
+        {"label": item.label, "href": item.href, "icon": item.icon, "active": _is_active(item, path)}
         for item in area.items
     ]
 

@@ -6,6 +6,7 @@ from types import SimpleNamespace as NS
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from piscinow.web.journey import comprador_journey, stage_overview
 from piscinow.web.navigation import AREAS
 
 # Registered only in development (see create_app). Lists every shared component and every
@@ -30,12 +31,17 @@ def _theme(request: Request) -> str | None:
     return {"escuro": "dark", "claro": "light"}.get(request.query_params.get("tema", ""))
 
 
-# Real templates rendered with example objects. The value is the menu path shown as active.
+# Real templates rendered with example objects: name -> (template, area, menu path shown as active).
+# An area of None renders the public layout (visitor), with no menu.
 PAGES = {
-    "admin_lojas": "/admin/lojas",
-    "admin_pagamentos": "/admin/pagamentos",
-    "loja_produtos": "/loja/produtos",
-    "comprador_pagamento": "/comprador/projeto",
+    "admin_lojas": ("admin_lojas.html", "admin", "/admin/lojas"),
+    "admin_pagamentos": ("admin_pagamentos.html", "admin", "/admin/pagamentos"),
+    "loja_produtos": ("loja_produtos.html", "loja", "/loja/produtos"),
+    "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
+    "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
+    "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
+    "vitrine_produtos_comprador": ("vitrine_produtos.html", "comprador", "/vitrine/produtos"),
+    "vitrine_produtos_visitante": ("vitrine_produtos.html", None, "/vitrine/produtos"),
 }
 
 
@@ -83,6 +89,33 @@ def _example_context(name: str) -> dict:
                 (NS(stage=stage("acabamento"), amount=Decimal("3000.00")), NS(name="Instalações Sul")),
             ],
         }
+    if name == "comprador_inicio":
+        return {
+            "first_name": "Marina", "project": NS(status=NS(value="confirmado")),
+            "product": NS(name="Piscina de fibra 7 x 3", category="fibra"),
+            "services": [NS(), NS()],
+            "payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")),
+            "journey": comprador_journey(has_product=True, confirmed=True, payment_status="pago", all_released=False),
+        }
+    if name == "comprador_obra":
+        rows = [
+            ("estrutura", "liberado", Decimal("18000.00"), "Studio Fibra Sul"),
+            ("acabamento", "retido", Decimal("3000.00"), "Instalações Sul"),
+        ]
+        return {"payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")), "stages": stage_overview(rows)}
+    if name in ("vitrine_produtos_comprador", "vitrine_produtos_visitante"):
+        logged = name.endswith("comprador")
+        return {
+            "items": [
+                {"product": NS(id=uid(51), name="Piscina de fibra 7 x 3", category="fibra", price=Decimal("18000.00")),
+                 "loja": NS(name="Studio Fibra Sul", region="Valinhos")},
+                {"product": NS(id=uid(52), name="Kit de filtragem", category="filtragem", price=Decimal("3500.00")),
+                 "loja": NS(name="Piscinas Campinas", region="Campinas")},
+            ],
+            "kind": "", "category": "", "regiao": "",
+            "comprador": NS(name="Marina Duarte") if logged else None,
+            "layout": "app_shell.html" if logged else "public_shell.html",
+        }
     raise KeyError(name)
 
 
@@ -90,7 +123,9 @@ def _example_context(name: str) -> dict:
 async def pagina(request: Request, name: str):
     if name not in PAGES:
         raise HTTPException(status_code=404)
-    request.scope["shell_area"] = name.split("_")[0]
-    request.scope["shell_path"] = PAGES[name]
+    template, area, active_path = PAGES[name]
+    if area:
+        request.scope["shell_area"] = area
+        request.scope["shell_path"] = active_path
     context = {**_example_context(name), "theme": _theme(request)}
-    return request.app.state.templates.TemplateResponse(request, f"{name}.html", context)
+    return request.app.state.templates.TemplateResponse(request, template, context)

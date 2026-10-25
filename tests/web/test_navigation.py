@@ -70,3 +70,21 @@ def test_an_unknown_gallery_area_is_404(monkeypatch):
     monkeypatch.delenv("PISCINOW_ENVIRONMENT", raising=False)
 
     assert TestClient(create_app()).get("/_galeria/nao-existe").status_code == 404
+
+
+def _active_labels(area_key: str, path: str) -> list[str]:
+    return [item["label"] for item in nav_items_for(AREAS[area_key], path) if item["active"]]
+
+
+def test_the_comprador_menu_follows_the_v3_order_and_starts_at_the_home_page():
+    labels = [item.label for item in AREAS["comprador"].items]
+
+    assert labels == ["Início", "Explorar produtos", "Explorar serviços", "Meu projeto", "Acompanhar obra"]
+    assert AREAS["comprador"].home == "/comprador"
+
+
+def test_the_home_item_is_active_only_on_the_home_page_itself():
+    assert _active_labels("comprador", "/comprador") == ["Início"]
+    assert _active_labels("comprador", "/comprador/obra") == ["Acompanhar obra"]
+    assert _active_labels("comprador", "/comprador/projeto") == ["Meu projeto"]
+    assert _active_labels("comprador", "/vitrine/produtos") == ["Explorar produtos"]

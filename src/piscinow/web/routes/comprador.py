@@ -98,7 +98,7 @@ async def login_submit(
     db: Session = Depends(get_db),
 ):
     if do_login(request, db, email, password):
-        return RedirectResponse(url="/comprador/projeto", status_code=303)
+        return RedirectResponse(url="/comprador", status_code=303)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request, "comprador_login.html", {"error": "E-mail ou senha invalidos"}, status_code=401

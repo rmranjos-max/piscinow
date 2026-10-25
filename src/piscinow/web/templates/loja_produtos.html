@@ -1,24 +1,16 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Meus produtos{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/loja/produtos">Piscinow <span class="badge">Loja</span></a>
-      <form method="post" action="/loja/logout"><button class="mini-btn" type="submit">Sair</button></form>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Meus produtos</h1>
 
       <div class="teach-form">
-        <h2 style="font-size:1.1rem; margin-bottom:14px;">Cadastrar produto</h2>
+        <h2>Cadastrar produto</h2>
         {% if error %}<p class="error">{{ error }}</p>{% endif %}
         {% if note %}<p class="error">{{ note }}</p>{% endif %}
 
-        <details style="margin-bottom:16px;">
-          <summary class="eyebrow" style="cursor:pointer;">Atalho: descreva em texto livre</summary>
-          <form method="post" action="/loja/produtos/chat" style="margin-top:10px;">
+        <details class="shortcut">
+          <summary class="eyebrow">Atalho: descreva em texto livre</summary>
+          <form method="post" action="/loja/produtos/chat" class="shortcut-form">
             <div class="field">
               <textarea name="text" placeholder="Ex: piscina de fibra 6x3, R$18 mil"></textarea>
             </div>
@@ -59,7 +51,7 @@
       </div>
 
       {% if products %}
-      <table class="admin-table">
+      <div class="tablewrap"><table class="admin-table">
         <thead><tr><th>Nome</th><th>Categoria</th><th>Pre&ccedil;o</th><th>Status</th><th>A&ccedil;&atilde;o</th></tr></thead>
         <tbody>
         {% for product in products %}
@@ -81,11 +73,8 @@
           </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}
       <p class="empty-note">Nenhum produto cadastrado ainda.</p>
       {% endif %}
-    </div>
-  </main>
-</div>
 {% endblock %}

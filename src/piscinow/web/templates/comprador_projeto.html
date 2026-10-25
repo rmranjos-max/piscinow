@@ -1,20 +1,12 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Meu projeto{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/comprador/projeto">Piscinow <span class="badge">Comprador</span></a>
-      <form method="post" action="/comprador/logout"><button class="mini-btn" type="submit">Sair</button></form>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Meu projeto</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
       {% if note %}<p class="error">{{ note }}</p>{% endif %}
 
       <div class="teach-form">
-        <h2 style="font-size:1.1rem; margin-bottom:14px;">
+        <h2>
           Status: {{ "Confirmado" if project.status.value == "confirmado" else "Rascunho" }}
         </h2>
 
@@ -31,7 +23,7 @@
 
         <h3>Servi&ccedil;os</h3>
         {% if services %}
-        <table class="admin-table">
+        <div class="tablewrap"><table class="admin-table">
           <thead><tr><th>Nome</th><th>Categoria</th><th>A&ccedil;&atilde;o</th></tr></thead>
           <tbody>
           {% for service in services %}
@@ -48,15 +40,15 @@
             </tr>
           {% endfor %}
           </tbody>
-        </table>
+        </table></div>
         {% else %}
         <p class="empty-note">Nenhum servi&ccedil;o adicionado ainda. <a href="/vitrine/servicos">Ver servi&ccedil;os</a></p>
         {% endif %}
 
         {% if project.status.value == "rascunho" %}
-        <details style="margin-bottom:16px;">
-          <summary class="eyebrow" style="cursor:pointer;">Atalho: descreva o que voc&ecirc; quer</summary>
-          <form method="post" action="/comprador/projeto/buscar" style="margin-top:10px;">
+        <details class="shortcut">
+          <summary class="eyebrow">Atalho: descreva o que voc&ecirc; quer</summary>
+          <form method="post" action="/comprador/projeto/buscar" class="shortcut-form">
             <div class="field">
               <textarea name="text" placeholder="Ex: piscina de fibra 6x3 em Valinhos, com instalacao"></textarea>
             </div>
@@ -71,7 +63,7 @@
           {% for p in sugestoes.produtos %}
           <li>
             {{ p.name }} — {{ p.category }} — R$ {{ p.price }}
-            <form method="post" action="/comprador/projeto/produto" style="display:inline;">
+            <form method="post" action="/comprador/projeto/produto" class="inline-form">
               <input type="hidden" name="product_id" value="{{ p.id }}">
               <button class="mini-btn" type="submit">Escolher</button>
             </form>
@@ -84,7 +76,7 @@
           {% for s in sugestoes.servicos %}
           <li>
             {{ s.name }} — {{ s.category }}
-            <form method="post" action="/comprador/projeto/servicos/{{ s.id }}/adicionar" style="display:inline;">
+            <form method="post" action="/comprador/projeto/servicos/{{ s.id }}/adicionar" class="inline-form">
               <button class="mini-btn" type="submit">Adicionar</button>
             </form>
           </li>
@@ -98,7 +90,4 @@
         </form>
         {% endif %}
       </div>
-    </div>
-  </main>
-</div>
 {% endblock %}

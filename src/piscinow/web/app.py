@@ -15,6 +15,7 @@ from piscinow.agent.provider_factory import build_llm_provider
 from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
+from piscinow.web.navigation import shell_context
 from piscinow.web.origin_check import OriginCheckMiddleware
 from piscinow.web.sensitive_headers import SensitivePathHeadersMiddleware
 from piscinow.web.routes import (
@@ -22,6 +23,7 @@ from piscinow.web.routes import (
     chat,
     comprador,
     comprador_projeto,
+    galeria,
     health,
     loja,
     pages,
@@ -35,7 +37,7 @@ INSECURE_SESSION_SECRET = "change-me-in-production"
 
 _HERE = Path(__file__).resolve().parent
 
-TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"))
+TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"), context_processors=[shell_context])
 
 
 def _format_brl(value) -> str:
@@ -83,6 +85,7 @@ def create_app() -> FastAPI:
     app.add_middleware(OriginCheckMiddleware, extra_hosts=[urlsplit(settings.public_base_url).netloc])
     app.add_middleware(SensitivePathHeadersMiddleware)
     app.state.cookie_secure = is_production
+    app.state.environment = settings.environment
     app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)
@@ -107,6 +110,8 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(health.router)
+    if not is_production:
+        app.include_router(galeria.router)
     app.include_router(pages.router)
     app.include_router(chat.router)
     app.include_router(admin.router)

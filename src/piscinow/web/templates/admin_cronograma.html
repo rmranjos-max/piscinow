@@ -1,25 +1,10 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Montar cronograma{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
-      <nav class="admin-nav">
-        <a href="/admin/fila">Fila de admiss&atilde;o</a>
-        <a href="/admin/lojas">Lojas</a>
-        <a href="/admin/prestadores">Prestadores</a>
-        <a href="/admin/compradores">Compradores</a>
-        <a href="/admin/pagamentos">Pagamentos</a>
-        <a href="/admin/correcoes">Ensinar o concierge</a>
-      </nav>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Montar cronograma</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
       <form method="post" action="/admin/pagamentos/{{ project.id }}/cronograma">
-        <table class="admin-table">
+        <div class="tablewrap"><table class="admin-table">
           <thead><tr><th>Item</th><th>Fase</th><th>Valor (R$)</th></tr></thead>
           <tbody>
             <tr>
@@ -51,10 +36,7 @@
             </tr>
             {% endfor %}
           </tbody>
-        </table>
+        </table></div>
         <button class="btn accent" type="submit">Salvar cronograma</button>
       </form>
-    </div>
-  </main>
-</div>
 {% endblock %}

@@ -1,0 +1,73 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, stat, notice, stepper, timeline, empty %}
+{% block title %}Galeria de componentes{% endblock %}
+{% block content %}
+<p class="eyebrow">Somente em desenvolvimento</p>
+<h1>Galeria de componentes</h1>
+<p class="sub">Cada peça compartilhada da interface, com dados de exemplo. Troque de ambiente para ver o menu de cada perfil.</p>
+
+<nav class="row-actions" aria-label="Ambientes">
+  {% for key, area in areas.items() %}
+  <a class="btn{% if key == area_key %} accent{% endif %}" href="/_galeria/{{ key }}">{{ area.label }}</a>
+  {% endfor %}
+</nav>
+
+<h2>Páginas reais com dados de exemplo</h2>
+<nav class="row-actions" aria-label="Páginas de exemplo">
+  {% for name in pages %}<a class="btn" href="/_galeria/pagina/{{ name }}">{{ name }}</a>{% endfor %}
+</nav>
+
+<h2>Selos</h2>
+<div class="row-actions">
+  {{ badge("Padrão") }} {{ badge("Aprovado", "green") }} {{ badge("Em análise", "amber") }}
+</div>
+
+<h2>Indicadores</h2>
+<div class="grid cols3">
+  {{ stat("12", "Cadastros na fila", "Aguardando revisão") }}
+  {{ stat("5", "Projetos confirmados", "Neste mês") }}
+  {{ stat("R$ 21.000,00", "Pagamentos simulados", "Nenhuma cobrança real") }}
+</div>
+
+<h2>Aviso</h2>
+{{ notice("A viabilidade técnica e as condições finais precisam ser confirmadas antes da contratação.") }}
+
+<h2>Etapas</h2>
+{{ stepper([
+  {"label": "Necessidades", "state": "done"},
+  {"label": "Projeto preliminar", "state": "done"},
+  {"label": "Proposta comercial", "state": "current"},
+  {"label": "Contratação", "state": ""},
+]) }}
+
+<h2>Linha do tempo</h2>
+<div class="card">
+  {{ timeline([
+    {"title": "Briefing organizado", "detail": "Informações iniciais registradas"},
+    {"title": "Fornecedor compatível", "detail": "Atribuição registrada pela equipe"},
+    {"title": "Revisar proposta", "detail": "Confira escopo, valores e condições"},
+  ]) }}
+</div>
+
+<h2>Tabela</h2>
+<div class="tablewrap">
+  <table class="admin-table">
+    <thead><tr><th>Nome</th><th>E-mail</th><th>Situação</th></tr></thead>
+    <tbody>
+      <tr><td>Studio Fibra Sul</td><td>contato@exemplo.com</td><td>{{ badge("Ativo", "green") }}</td></tr>
+      <tr><td>Instalações Sul</td><td>obras@exemplo.com</td><td>{{ badge("Aguardando senha", "amber") }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Formulário</h2>
+<form class="teach-form narrow">
+  <div class="field"><label for="g-nome">Nome do produto</label><input id="g-nome" type="text" value="Piscina de fibra 7 x 3"></div>
+  <div class="field"><label for="g-tipo">Tipo</label><select id="g-tipo"><option>Piscina</option><option>Equipamento</option></select></div>
+  <p class="error">Informe um valor válido.</p>
+  <div class="row-actions"><button class="btn accent" type="button">Salvar</button><button class="btn" type="button">Cancelar</button></div>
+</form>
+
+<h2>Estado vazio</h2>
+{{ empty("Nenhum item cadastrado ainda.") }}
+{% endblock %}

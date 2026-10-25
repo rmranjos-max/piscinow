@@ -1,24 +1,9 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Projetos aguardando cronograma{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
-      <nav class="admin-nav">
-        <a href="/admin/fila">Fila de admiss&atilde;o</a>
-        <a href="/admin/lojas">Lojas</a>
-        <a href="/admin/prestadores">Prestadores</a>
-        <a href="/admin/compradores">Compradores</a>
-        <a href="/admin/pagamentos">Pagamentos</a>
-        <a href="/admin/correcoes">Ensinar o concierge</a>
-      </nav>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Projetos aguardando cronograma</h1>
       {% if items %}
-      <table class="admin-table">
+      <div class="tablewrap"><table class="admin-table">
         <thead><tr><th>Comprador</th><th>Produto</th><th>A&ccedil;&atilde;o</th></tr></thead>
         <tbody>
         {% for item in items %}
@@ -29,14 +14,14 @@
           </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}
       <p class="empty-note">Nenhum projeto aguardando cronograma no momento.</p>
       {% endif %}
 
-      <h2 style="font-size:1.1rem; margin-top:24px;">Pagamentos criados</h2>
+      <h2>Pagamentos criados</h2>
       {% if payments %}
-      <table class="admin-table">
+      <div class="tablewrap"><table class="admin-table">
         <thead><tr><th>Comprador</th><th>Status</th><th>Total</th><th>A&ccedil;&atilde;o</th></tr></thead>
         <tbody>
         {% for item in payments %}
@@ -48,11 +33,8 @@
           </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}
       <p class="empty-note">Nenhum pagamento criado ainda.</p>
       {% endif %}
-    </div>
-  </main>
-</div>
 {% endblock %}

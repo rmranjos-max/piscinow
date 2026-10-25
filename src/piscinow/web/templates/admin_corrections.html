@@ -1,21 +1,6 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Ensinar o concierge{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
-      <nav class="admin-nav">
-        <a href="/admin/fila">Fila de admiss&atilde;o</a>
-        <a href="/admin/lojas">Lojas</a>
-        <a href="/admin/prestadores">Prestadores</a>
-        <a href="/admin/compradores">Compradores</a>
-        <a href="/admin/pagamentos">Pagamentos</a>
-        <a href="/admin/correcoes">Ensinar o concierge</a>
-      </nav>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Ensinar o concierge</h1>
 
       <form class="teach-form" method="post" action="/admin/correcoes/ensinar">
@@ -58,7 +43,4 @@
       {% else %}
       <p class="empty-note">Nenhuma conversa registrada ainda.</p>
       {% endif %}
-    </div>
-  </main>
-</div>
 {% endblock %}

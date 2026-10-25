@@ -1,18 +1,10 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Pagamento do projeto{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/comprador/projeto">Piscinow <span class="badge">Comprador</span></a>
-      <form method="post" action="/comprador/logout"><button class="mini-btn" type="submit">Sair</button></form>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Pagamento do projeto</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
       <p>Total: R$ {{ payment.total_amount | brl }}</p>
-      <table class="admin-table">
+      <div class="tablewrap"><table class="admin-table">
         <thead><tr><th>Destinat&aacute;rio</th><th>Fase</th><th>Valor</th></tr></thead>
         <tbody>
         {% for allocation, recipient in allocations %}
@@ -23,7 +15,7 @@
           </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% if payment.status.value == "pendente" %}
       {% if request.app.state.payments_enabled %}
       {% if request.app.state.payments_simulated %}
@@ -38,7 +30,4 @@
       {% else %}
       <p class="empty-note">Pagamento realizado.</p>
       {% endif %}
-    </div>
-  </main>
-</div>
 {% endblock %}

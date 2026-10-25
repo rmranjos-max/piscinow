@@ -1,27 +1,12 @@
-{% extends "base.html" %}
+{% extends "app_shell.html" %}
+{% block title %}Pagamento{% endblock %}
 {% block content %}
-<div class="admin-shell">
-  <header class="admin-topbar">
-    <div class="wrap">
-      <a class="brand" href="/admin/fila">Piscinow <span class="badge">Admin</span></a>
-      <nav class="admin-nav">
-        <a href="/admin/fila">Fila de admiss&atilde;o</a>
-        <a href="/admin/lojas">Lojas</a>
-        <a href="/admin/prestadores">Prestadores</a>
-        <a href="/admin/compradores">Compradores</a>
-        <a href="/admin/pagamentos">Pagamentos</a>
-        <a href="/admin/correcoes">Ensinar o concierge</a>
-      </nav>
-    </div>
-  </header>
-  <main class="admin-main">
-    <div class="wrap">
       <h1>Pagamento</h1>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
       <p>Status: {{ "Pago" if payment.status.value == "pago" else "Pendente" }} — Total: R$ {{ payment.total_amount | brl }}</p>
 
       {% for group in stages_data %}
-      <h2 style="font-size:1.1rem; margin-top:20px;">
+      <h2>
         {{ group.stage.value | capitalize }}
         {% if group.all_released %}(liberado){% endif %}
       </h2>
@@ -30,7 +15,7 @@
         <button class="mini-btn" type="submit">Liberar fase</button>
       </form>
       {% endif %}
-      <table class="admin-table">
+      <div class="tablewrap"><table class="admin-table">
         <thead><tr><th>Destinat&aacute;rio</th><th>Valor</th><th>Status</th></tr></thead>
         <tbody>
         {% for allocation, recipient in group.allocations %}
@@ -41,9 +26,6 @@
           </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% endfor %}
-    </div>
-  </main>
-</div>
 {% endblock %}

@@ -71,3 +71,10 @@ antiga continua valendo ate a pessoa definir a nova. Cada geracao fica no log co
 
 Se o proprio admin esquecer a senha (o mesmo comando cria um admin novo ou troca a senha de um existente), rode no servidor:
 `docker compose run --rm app python -m piscinow.scripts.create_admin <email> "<nova-senha>"`.
+
+### Galeria de componentes (so em desenvolvimento)
+
+Com `PISCINOW_ENVIRONMENT=development` (o padrao local), `uvicorn piscinow.web.app:app --lifespan off` serve
+`/_galeria`: cada componente compartilhado, o menu de cada ambiente e paginas reais com dados de exemplo
+(`/_galeria/pagina/<nome>`), sem precisar de banco. `?tema=escuro` ou `?tema=claro` forca o tema.
+Em producao essas rotas nao existem. Fontes (Manrope e DM Sans) e licencas em `src/piscinow/static/fonts`.

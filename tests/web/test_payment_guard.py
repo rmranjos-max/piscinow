@@ -30,7 +30,8 @@ def _production_client(db_session, monkeypatch, *, allow_simulation=False):
         db_session.commit()
 
     app.dependency_overrides[get_db] = override_get_db
-    return TestClient(app)
+    # Em producao o cookie de sessao e Secure: so volta ao servidor por https.
+    return TestClient(app, base_url="https://testserver")
 
 
 def test_production_refuses_to_start_with_the_default_session_secret(monkeypatch):
@@ -92,6 +93,8 @@ def test_pagamento_page_hides_the_pay_button_in_production(db_session, monkeypat
     response = client.get("/comprador/projeto/pagamento")
 
     assert response.status_code == 200
+    assert "Pagamento do projeto" in response.text
+    assert "ainda n&atilde;o est&aacute; dispon&iacute;vel" in response.text
     assert "/comprador/projeto/pagamento/pagar" not in response.text
 
 

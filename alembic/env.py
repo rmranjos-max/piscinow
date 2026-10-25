@@ -14,6 +14,7 @@ import piscinow.models.memory  # noqa: F401
 import piscinow.models.payment  # noqa: F401
 import piscinow.models.matching  # noqa: F401
 import piscinow.models.product  # noqa: F401
+import piscinow.models.proposal  # noqa: F401
 import piscinow.models.qualification  # noqa: F401
 import piscinow.models.project  # noqa: F401
 import piscinow.models.service  # noqa: F401

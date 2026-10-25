@@ -17,6 +17,7 @@ import piscinow.models.project  # noqa: E402,F401
 import piscinow.models.payment  # noqa: E402,F401
 import piscinow.models.qualification  # noqa: E402,F401
 import piscinow.models.matching  # noqa: E402,F401
+import piscinow.models.proposal  # noqa: E402,F401
 
 
 @pytest.fixture(scope="session")

@@ -192,3 +192,18 @@ def test_the_consultor_is_in_the_menu_and_marked_active(client, db_session):
     response = client.get("/comprador/consultor")
 
     assert 'href="/comprador/consultor" aria-current="page"' in response.text
+
+
+def test_the_buyer_can_withdraw_the_authorization_and_the_opportunity_stops(client, db_session):
+    from piscinow.qualification.deals import active_deal
+
+    comprador = _comprador_logged_in(client, db_session)
+    _fill_required(db_session, comprador)
+    client.post("/comprador/consultor/consentimento", data={"decisao": "autorizo"})
+    assert active_deal(db_session, comprador.id) is not None
+    assert "Retirar a autorização" in client.get("/comprador/consultor").text
+
+    client.post("/comprador/consultor/consentimento", data={"decisao": "depois"})
+
+    assert find_qualification(db_session, comprador).consent == ConsentState.RECUSADO
+    assert active_deal(db_session, comprador.id) is None

@@ -13,7 +13,7 @@ from piscinow.models.qualification import (
     QualificationStatus,
     Verification,
 )
-from piscinow.qualification.deals import open_deal_if_qualified
+from piscinow.qualification.deals import cancel_for_withdrawn_consent, open_deal_if_qualified
 from piscinow.qualification.fields import FIELDS, normalize_field
 from piscinow.qualification.flow import is_qualified
 
@@ -108,6 +108,8 @@ def request_attention(qualification: LeadQualification, note: str) -> None:
 def set_consent(db: Session, qualification: LeadQualification, granted: bool) -> None:
     qualification.consent = ConsentState.CONCEDIDO if granted else ConsentState.RECUSADO
     qualification.consent_at = datetime.now(timezone.utc)
+    if not granted:
+        cancel_for_withdrawn_consent(db, qualification)
     refresh_status(db, qualification)
 
 

@@ -42,6 +42,10 @@
         <p class="muted small">Para compartilhar com as lojas, ainda falta: {{ missing|join(", ") }}.</p>
       {% elif consent == "concedido" %}
         <p><b>Você autorizou o compartilhamento.</b> A nossa equipe vai acompanhar o seu projeto e as lojas compatíveis serão avisadas.</p>
+        <form method="post" action="/comprador/consultor/consentimento">
+          <button class="mini-btn" type="submit" name="decisao" value="depois">Retirar a autorização</button>
+        </form>
+        <p class="muted small">Ao retirar, a oportunidade é pausada e as lojas deixam de ver o seu briefing.</p>
       {% else %}
         <p><b>Posso compartilhar este briefing?</b></p>
         <p class="muted small">Só o briefing abaixo, sem nome e sem contato, com lojas compatíveis. Seus dados de contato só são liberados se você aceitar uma proposta.</p>

@@ -111,3 +111,46 @@ def test_a_lost_deal_is_not_reopened_just_because_the_buyer_edits_the_briefing(d
 
     assert active_deal(db_session, member.id) is None
     assert db_session.query(Deal).filter_by(member_id=member.id).count() == 1
+
+
+def test_withdrawing_the_authorization_cancels_the_active_deal_and_says_why(db_session):
+    member = _comprador(db_session)
+    qualification = get_or_create_qualification(db_session, member)
+    _fill(db_session, qualification)
+    set_consent(db_session, qualification, True)
+    deal = active_deal(db_session, member.id)
+
+    set_consent(db_session, qualification, False)
+
+    assert qualification.consent == ConsentState.RECUSADO
+    assert qualification.status.value == "em_andamento"
+    assert deal.status == DealStatus.CANCELLED
+    assert active_deal(db_session, member.id) is None
+    event = db_session.query(DealEvent).filter_by(deal_id=deal.id, kind="status_changed").one()
+    assert (event.from_status, event.to_status, event.actor) == ("qualified", "cancelled", f"comprador:{member.id}")
+    assert "retirou a autorização" in event.note
+
+
+def test_authorizing_again_after_a_withdrawal_opens_a_new_deal(db_session):
+    member = _comprador(db_session)
+    qualification = get_or_create_qualification(db_session, member)
+    _fill(db_session, qualification)
+    set_consent(db_session, qualification, True)
+    first = active_deal(db_session, member.id)
+    set_consent(db_session, qualification, False)
+
+    set_consent(db_session, qualification, True)
+
+    second = active_deal(db_session, member.id)
+    assert second is not None and second.id != first.id
+    assert db_session.query(Deal).filter_by(member_id=member.id).count() == 2
+
+
+def test_declining_before_any_deal_exists_does_not_create_or_cancel_anything(db_session):
+    member = _comprador(db_session)
+    qualification = get_or_create_qualification(db_session, member)
+    _fill(db_session, qualification)
+
+    set_consent(db_session, qualification, False)
+
+    assert db_session.query(Deal).count() == 0

@@ -47,14 +47,20 @@ def record_event(
 def open_deal_if_qualified(db: Session, qualification: LeadQualification) -> Deal | None:
     """Create the buyer's deal once, when the essentials and the consent are in.
 
-    A qualification opens at most one deal in its life: a deal the team has closed is never
-    silently reopened because the buyer edited the briefing afterwards.
+    A deal the team has lost is never silently reopened because the buyer edited the briefing
+    afterwards. One cancelled because the buyer withdrew the authorization reopens when they authorize again.
     """
     consent = qualification.consent
     if not is_qualified(qualification.values(), consent.value if isinstance(consent, ConsentState) else consent):
         return None
-    already = db.scalar(select(Deal.id).where(Deal.qualification_id == qualification.id).limit(1))
-    if already is not None:
+    # Only a deal the team lost blocks a new one; a cancelled one (authorization withdrawn) may reopen.
+    blocked = db.scalar(
+        select(Deal.id).where(
+            Deal.qualification_id == qualification.id,
+            Deal.status.notin_((DealStatus.CANCELLED,)),
+        ).limit(1)
+    )
+    if blocked is not None:
         return None
     deal = Deal(member_id=qualification.member_id, qualification_id=qualification.id, status=DealStatus.QUALIFIED)
     db.add(deal)
@@ -75,4 +81,19 @@ def mark_lost(db: Session, deal: Deal, *, reason: str, actor: str) -> None:
     record_event(
         db, deal, "status_changed", actor=actor,
         from_status=previous.value, to_status=DealStatus.LOST.value, note=reason[:500],
+    )
+
+
+def cancel_for_withdrawn_consent(db: Session, qualification: LeadQualification) -> None:
+    """The buyer took the authorization back: stores must stop seeing the briefing right away."""
+    deal = active_deal(db, qualification.member_id)
+    if deal is None or deal.status == DealStatus.ACCEPTED:
+        # An accepted proposal already released the contact; it is no longer a briefing-sharing matter.
+        return
+    previous = deal.status
+    deal.status = DealStatus.CANCELLED
+    record_event(
+        db, deal, "status_changed", actor=f"comprador:{qualification.member_id}",
+        from_status=previous.value, to_status=DealStatus.CANCELLED.value,
+        note="O comprador retirou a autorização de compartilhamento.",
     )

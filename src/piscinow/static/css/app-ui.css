@@ -304,7 +304,12 @@ details.shortcut { margin-bottom: 16px; }
 .criteria .no { color: var(--danger); }
 .review-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
 .review-form input { flex: 1 1 180px; min-width: 0; }
-.opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+.proposal { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.proposal.current { border-color: var(--link); background: var(--nav-active-bg); }
+.proposal-form { display: grid; gap: 6px; margin-top: 10px; }
+.item-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+.opp-list h3 { margin: 18px 0 6px; font-size: 15px; }
+.opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; margin-top: 16px; }
 .opp-list .card { margin-bottom: 0; }
 .form-actions { margin-top: 16px; }
 .filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 6px; }

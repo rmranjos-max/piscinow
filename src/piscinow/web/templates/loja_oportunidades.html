@@ -4,7 +4,7 @@
 {% block content %}
 <p class="eyebrow">Comercial</p>
 <h1>Oportunidades</h1>
-<p class="sub">Compradores que a equipe da Piscinow indicou para a sua loja. Você vê o projeto, sem nome e sem contato; os dados de contato só são liberados se o comprador aceitar uma proposta.</p>
+<p class="sub">Compradores que a equipe da Piscinow indicou para a sua loja. Você vê o projeto, sem nome e sem contato; os dados de contato só são liberados se o comprador aceitar a sua proposta.</p>
 
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 
@@ -19,6 +19,18 @@
     <ul class="plain-list">
       {% for campo in item.briefing.campos %}<li><span>{{ campo.rotulo }}</span><b>{{ campo.valor }}</b></li>{% endfor %}
     </ul>
+
+    {% if item.contact %}
+    <div class="consent-box">
+      <p><b>O comprador aceitou a sua proposta.</b> Contato liberado:</p>
+      <ul class="plain-list">
+        <li><span>Nome</span><b>{{ item.contact.nome }}</b></li>
+        <li><span>E-mail</span><b>{{ item.contact.email or "—" }}</b></li>
+        <li><span>Telefone</span><b>{{ item.contact.telefone or "—" }}</b></li>
+      </ul>
+    </div>
+    {% endif %}
+
     {% if item.response == "pendente" or item.response == "em_analise" %}
     <form class="review-form" method="post" action="/loja/oportunidades/{{ item.decision.id }}/resposta">
       <label class="visually-hidden" for="motivo-{{ item.decision.id }}">Motivo, se for recusar</label>
@@ -28,6 +40,68 @@
     </form>
     {% else %}
     <p class="muted small">Motivo informado: {{ item.decision.response_reason }}</p>
+    {% endif %}
+
+    {% if item.proposals %}
+    <h3>Suas propostas</h3>
+    {% for entry in item.proposals %}
+    <div class="proposal{% if loop.first %} current{% endif %}">
+      <div class="row-between">
+        <b>Versão {{ entry.p.version }} · {{ entry.total }}</b>
+        {{ badge("Vencida" if entry.expired else entry.label, "green" if entry.p.status.value == "aceita" else ("amber" if entry.expired or entry.p.status.value in ("recusada", "encerrada") else "")) }}
+      </div>
+      <p class="muted small">Prazo {{ entry.p.lead_time_days }} dias · válida até {{ entry.p.valid_until.strftime("%d/%m/%Y") }}</p>
+      <ul class="plain-list">{% for description, amount in entry["items"] %}<li><span>{{ description }}</span><b>{{ amount }}</b></li>{% endfor %}</ul>
+      <p class="small"><b>Escopo:</b> {{ entry.p.scope }}</p>
+      {% if entry.p.exclusions %}<p class="small"><b>Não inclui:</b> {{ entry.p.exclusions }}</p>{% endif %}
+      {% if entry.p.decision_reason %}<p class="small"><b>Motivo da recusa:</b> {{ entry.p.decision_reason }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if item.can_propose %}
+    <details class="shortcut"{% if item.errors %} open{% endif %}>
+      <summary><b>Enviar proposta</b>{% if item.proposals %} (nova versão){% endif %}</summary>
+      {% if item.errors %}<ul class="error" role="alert">{% for e in item.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      <form method="post" action="/loja/oportunidades/{{ item.decision.id }}/proposta" class="proposal-form">
+        <p class="muted small">Cada envio é uma versão nova e não pode ser editado depois. O total é a soma dos itens.</p>
+        {% for i in item.rows %}
+        <div class="item-row">
+          <label class="visually-hidden" for="d-{{ item.decision.id }}-{{ i }}">Item {{ i + 1 }}</label>
+          <input id="d-{{ item.decision.id }}-{{ i }}" name="item_desc" type="text" maxlength="300" placeholder="Item {{ i + 1 }}" value="{{ item.form.rows[i][0] if item.form.rows else '' }}">
+          <label class="visually-hidden" for="a-{{ item.decision.id }}-{{ i }}">Valor do item {{ i + 1 }}</label>
+          <input id="a-{{ item.decision.id }}-{{ i }}" name="item_amount" type="text" inputmode="decimal" placeholder="Valor (18000,00)" value="{{ item.form.rows[i][1] if item.form.rows else '' }}">
+        </div>
+        {% endfor %}
+        <div class="field"><label for="scope-{{ item.decision.id }}">Escopo</label>
+          <textarea id="scope-{{ item.decision.id }}" name="scope" rows="3" maxlength="2000">{{ item.form.scope or "" }}</textarea></div>
+        <div class="field"><label for="days-{{ item.decision.id }}">Prazo estimado (dias)</label>
+          <input id="days-{{ item.decision.id }}" name="lead_time_days" type="number" min="1" max="730" value="{{ item.form.lead_time_days or '' }}"></div>
+        <div class="field"><label for="valid-{{ item.decision.id }}">Válida até</label>
+          <input id="valid-{{ item.decision.id }}" name="valid_until" type="date" value="{{ item.form.valid_until or '' }}"></div>
+        <div class="field"><label for="excl-{{ item.decision.id }}">O que não está incluso</label>
+          <textarea id="excl-{{ item.decision.id }}" name="exclusions" rows="2" maxlength="1000">{{ item.form.exclusions or "" }}</textarea></div>
+        <button class="btn accent" type="submit">Enviar proposta</button>
+      </form>
+    </details>
+    {% endif %}
+
+    {% if item.proposals or item.messages %}
+    <h3>Conversa com o comprador</h3>
+    {% if item.messages %}
+    <ol class="chat-log">
+      {% for m in item.messages %}
+      <li class="bubble {{ 'user' if m.mine else 'agent' }}">
+        <span class="visually-hidden">{{ "Você" if m.mine else "Comprador" }}: </span>{% if m.revision %}<b>Pedido de revisão.</b> {% endif %}{{ m.text }}
+      </li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+    <form class="review-form" method="post" action="/loja/oportunidades/{{ item.decision.id }}/mensagem">
+      <label class="visually-hidden" for="msg-{{ item.decision.id }}">Mensagem ao comprador</label>
+      <input id="msg-{{ item.decision.id }}" name="texto" type="text" maxlength="1000" placeholder="Escreva ao comprador" required>
+      <button class="btn" type="submit">Enviar mensagem</button>
+    </form>
     {% endif %}
   </article>
   {% endfor %}

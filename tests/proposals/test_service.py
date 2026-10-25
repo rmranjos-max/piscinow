@@ -163,12 +163,12 @@ def test_only_the_buyer_can_flag_a_revision_request(db_session):
 
 def test_rejecting_a_proposal_needs_a_reason_and_keeps_the_deal_open_for_a_new_version(db_session):
     loja = _loja(db_session)
-    _, _, deal, decisions = _setup(db_session, loja)
+    buyer, _, deal, decisions = _setup(db_session, loja)
     proposal = _send(db_session, decisions[loja.id])
 
     with pytest.raises(ProposalError):
-        reject_proposal(db_session, proposal, reason=" ")
-    reject_proposal(db_session, proposal, reason="Valor acima do orçamento")
+        reject_proposal(db_session, proposal, buyer, reason=" ")
+    reject_proposal(db_session, proposal, buyer, reason="Valor acima do orçamento")
 
     assert proposal.status == ProposalStatus.RECUSADA
     assert proposal.decision_reason == "Valor acima do orçamento"
@@ -293,3 +293,20 @@ def test_an_inconsistent_viability_decision_is_refused(db_session):
                          items=[{"key": k, "state": "pendente", "note": ""} for k in
                                 ["acesso", "terreno", "escavacao", "hidraulica_eletrica", "medidas", "visita"]],
                          notes="", actor="admin:x")
+
+
+def test_only_the_owner_can_reject_and_only_while_the_opportunity_is_open_and_visible(db_session):
+    loja = _loja(db_session)
+    buyer, qualification, deal, decisions = _setup(db_session, loja)
+    proposal = _send(db_session, decisions[loja.id])
+    stranger = Member(profile_type=ProfileType.COMPRADOR, name="Outro", status=MemberStatus.APPROVED)
+    db_session.add(stranger)
+    db_session.flush()
+
+    with pytest.raises(ProposalError):
+        reject_proposal(db_session, proposal, stranger, reason="Não gostei")
+    assert proposal.status == ProposalStatus.ENVIADA
+
+    set_consent(db_session, qualification, False)  # the buyer withdraws: the deal is cancelled
+    with pytest.raises(ProposalError):
+        reject_proposal(db_session, proposal, buyer, reason="Desisti")

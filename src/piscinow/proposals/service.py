@@ -129,19 +129,32 @@ def post_message(
     return message
 
 
-def reject_proposal(db: Session, proposal: Proposal, *, reason: str) -> None:
-    if proposal.status != ProposalStatus.ENVIADA:
+def _owned_open_proposal(db: Session, proposal: Proposal, buyer: Member) -> Deal:
+    """The deal of a proposal the buyer may still act on; the same gate for accepting and rejecting."""
+    deal = db.get(Deal, proposal.deal_id)
+    if buyer.id != deal.member_id:
+        raise ProposalError("Esta proposta não está disponível.")
+    if deal.status not in NEGOTIABLE or proposal.status != ProposalStatus.ENVIADA:
         raise ProposalError("Esta proposta não está mais em aberto.")
+    decision = db.scalar(select(MatchingDecision).where(
+        MatchingDecision.deal_id == deal.id, MatchingDecision.partner_member_id == proposal.partner_member_id
+    ))
+    if decision is None or not decision_is_visible(db, decision):
+        raise ProposalError("Esta proposta não está mais disponível.")
+    return deal
+
+
+def reject_proposal(db: Session, proposal: Proposal, buyer: Member, *, reason: str) -> None:
+    deal = _owned_open_proposal(db, proposal, buyer)
     reason = (reason or "").strip()
     if not reason:
         raise ProposalError("Informe o motivo para recusar.")
     proposal.status = ProposalStatus.RECUSADA
     proposal.decision_reason = reason[:500]
     proposal.decided_at = datetime.now(timezone.utc)
-    deal = db.get(Deal, proposal.deal_id)
     store = db.get(Member, proposal.partner_member_id)
     record_event(
-        db, deal, "proposal_rejected", actor=f"comprador:{deal.member_id}",
+        db, deal, "proposal_rejected", actor=f"comprador:{buyer.id}",
         note=f"Proposta v{proposal.version} de {store.name} recusada: {reason[:200]}",
     )
 
@@ -153,16 +166,7 @@ def feasibility_status_of(db: Session, deal: Deal) -> str | None:
 
 def accept_proposal(db: Session, proposal: Proposal, buyer: Member, *, today: date | None = None) -> None:
     today = today or date.today()
-    deal = db.get(Deal, proposal.deal_id)
-    if buyer.id != deal.member_id:
-        raise ProposalError("Esta proposta não está disponível.")
-    if deal.status not in NEGOTIABLE or proposal.status != ProposalStatus.ENVIADA:
-        raise ProposalError("Esta proposta não está mais em aberto.")
-    decision = db.scalar(select(MatchingDecision).where(
-        MatchingDecision.deal_id == deal.id, MatchingDecision.partner_member_id == proposal.partner_member_id
-    ))
-    if decision is None or not decision_is_visible(db, decision):
-        raise ProposalError("Esta proposta não está mais disponível.")
+    deal = _owned_open_proposal(db, proposal, buyer)
     if is_expired(proposal.valid_until, today):
         raise ProposalError("Esta proposta está vencida; peça uma nova versão à loja.")
     blocker = acceptance_blocker(feasibility_status_of(db, deal))

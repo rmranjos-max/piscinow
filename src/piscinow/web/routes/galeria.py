@@ -146,10 +146,19 @@ def _example_context(name: str) -> dict:
             ],
         }
     if name == "loja_oportunidades":
-        item = lambda n, code, campos, response, label: {  # noqa: E731
+        def proposal(version, status, label, total, items, *, expired=False):
+            return {
+                "p": NS(version=version, status=NS(value=status), lead_time_days=45, valid_until=now.date() + timedelta(days=12),
+                        scope="Fornecimento e instalação completa, com 1 visita técnica.", exclusions="Paisagismo e cercamento",
+                        decision_reason=None),
+                "label": label, "expired": expired, "total": total, "items": items,
+            }
+
+        item = lambda n, code, campos, response, label, **extra: {  # noqa: E731
             "decision": NS(id=uid(70 + n), response_reason="Agenda cheia até dezembro" if response == "recusada" else None),
             "briefing": {"codigo": code, "campos": [{"rotulo": r, "valor": v} for r, v in campos]},
-            "response": response, "response_label": label,
+            "response": response, "response_label": label, "contact": None, "can_propose": False,
+            "proposals": [], "messages": [], "rows": range(6), "errors": [], "form": {}, **extra,
         }
         return {
             "error": None,
@@ -158,7 +167,15 @@ def _example_context(name: str) -> dict:
                                          ("Prazo desejado", "Até 90 dias"), ("Orçamento", "R$ 30 a 50 mil")],
                      "pendente", "Aguardando a sua resposta"),
                 item(2, "Cliente #09BC", [("Localização", "Campinas"), ("Tipo de piscina", "Ainda não sei"), ("Prazo desejado", "Até 6 meses")],
-                     "em_analise", "Você vai analisar"),
+                     "em_analise", "Você vai analisar", can_propose=True,
+                     proposals=[
+                         proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00")]),
+                         proposal(1, "substituida", "Substituída", "R$ 21.000,00", [("Piscina de fibra 7x3", "R$ 18.000,00"), ("Instalação", "R$ 3.000,00")]),
+                     ],
+                     messages=[
+                         {"mine": False, "text": "Consegue reduzir o valor se eu retirar a instalação?", "revision": True, "at": now},
+                         {"mine": True, "text": "Posso fazer a versão 2 com o valor fechado.", "revision": False, "at": now},
+                     ]),
                 item(3, "Cliente #77D2", [("Localização", "Vinhedo"), ("Tipo de piscina", "Vinil"), ("Prazo desejado", "Sem prazo definido")],
                      "recusada", "Você recusou"),
             ],

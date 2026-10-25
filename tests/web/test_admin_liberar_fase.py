@@ -3,6 +3,7 @@ from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.payment import AllocationStatus, Payment, PaymentAllocation, PaymentStage, PaymentStatus
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.project import Project, ProjectStatus
+from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProviderError
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.web.deps import get_payment_provider
@@ -110,11 +111,14 @@ def _paid_payment_with_two_allocations(db_session, *, stage=PaymentStage.ESTRUTU
     )
     db_session.add(payment)
     db_session.flush()
+    service = Service(member_id=prestador.id, kind=ServiceKind.INSTALACAO, category="fibra", name="Instalacao completa")
+    db_session.add(service)
+    db_session.flush()
     allocation_1 = PaymentAllocation(
         payment_id=payment.id, stage=stage, recipient_member_id=loja.id, product_id=product.id, amount=18000
     )
     allocation_2 = PaymentAllocation(
-        payment_id=payment.id, stage=stage, recipient_member_id=prestador.id, amount=3000
+        payment_id=payment.id, stage=stage, recipient_member_id=prestador.id, service_id=service.id, amount=3000
     )
     db_session.add_all([allocation_1, allocation_2])
     db_session.flush()

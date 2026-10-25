@@ -1,0 +1,89 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, notice, empty %}
+{% block title %}Consultor{% endblock %}
+{% block content %}
+<p class="eyebrow">Consultor Piscinow</p>
+<h1>Conte o que você imagina</h1>
+<p class="sub">Converse com a nossa assistente virtual. Ela entende o seu projeto e prepara o briefing que as lojas do Clube vão receber.</p>
+
+{% if unavailable %}
+{{ notice("A assistente está indisponível agora. A sua mensagem foi guardada; tente novamente em instantes ou aguarde a equipe.") }}
+{% endif %}
+{% if attention %}
+{{ notice("A nossa equipe foi avisada e vai te ajudar a completar o que for preciso.") }}
+{% endif %}
+
+<div class="consultor">
+  <section class="card chat" aria-labelledby="conversa">
+    <h2 id="conversa" class="visually-hidden">Conversa</h2>
+    <ol class="chat-log" aria-live="polite">
+      {% for message in messages %}
+      <li class="bubble {{ 'agent' if message.from_agent else 'user' }}">
+        <span class="visually-hidden">{{ "Assistente Piscinow" if message.from_agent else "Você" }}: </span>{{ message.text }}
+      </li>
+      {% endfor %}
+    </ol>
+    <form class="chat-form" id="responder" method="post" action="/comprador/consultor/mensagem">
+      <label for="mensagem">Sua mensagem</label>
+      <textarea id="mensagem" name="message" rows="3" maxlength="1000" required placeholder="Escreva aqui, como numa conversa."></textarea>
+      <button class="btn accent" type="submit">Enviar</button>
+    </form>
+  </section>
+
+  <aside class="card briefing" aria-labelledby="briefing-titulo">
+    <div class="row-between">
+      <h2 id="briefing-titulo">Seu briefing</h2>
+      {% if consent == "concedido" %}{{ badge("Autorizado", "green") }}{% elif missing %}{{ badge("Em construção", "amber") }}{% else %}{{ badge("Completo", "green") }}{% endif %}
+    </div>
+    <p class="muted small">É isto que as lojas vão ver, sem o seu nome e sem o seu contato.</p>
+
+    <div class="consent-box">
+      {% if missing %}
+        <p class="muted small">Para compartilhar com as lojas, ainda falta: {{ missing|join(", ") }}.</p>
+      {% elif consent == "concedido" %}
+        <p><b>Você autorizou o compartilhamento.</b> A nossa equipe vai acompanhar o seu projeto e as lojas compatíveis serão avisadas.</p>
+      {% else %}
+        <p><b>Posso compartilhar este briefing?</b></p>
+        <p class="muted small">Só o briefing abaixo, sem nome e sem contato, com lojas compatíveis. Seus dados de contato só são liberados se você aceitar uma proposta.</p>
+        <form method="post" action="/comprador/consultor/consentimento" class="row-actions">
+          <button class="btn accent" type="submit" name="decisao" value="autorizo">Autorizo compartilhar meu briefing, sem nome e sem contato, com lojas compatíveis</button>
+          {% if consent == "nao_respondido" %}<button class="btn" type="submit" name="decisao" value="depois">Prefiro conversar antes</button>{% endif %}
+        </form>
+        {% if consent == "recusado" %}<p class="muted small">Você preferiu conversar antes. Pode autorizar quando se sentir à vontade.</p>{% endif %}
+      {% endif %}
+    </div>
+
+    <ul class="briefing-list">
+      {% for row in briefing %}
+      <li>
+        <div class="row-between">
+          <span class="briefing-label">{{ row.label }}{% if row.required %} <span class="muted small">(essencial)</span>{% endif %}</span>
+          {% if row.source %}<span class="origin">{{ {"cliente": "Você informou", "parceiro": "Informado por parceiro", "admin": "Equipe"}[row.source] }}{% if row.verification == "verificado" %} · verificado{% endif %}</span>{% endif %}
+        </div>
+        {% if row.value %}
+          <p class="briefing-value">{% if row.choices %}{{ row.choices.get(row.value, row.value) }}{% else %}{{ row.value }}{% endif %}</p>
+        {% else %}
+          <p class="briefing-value muted">Ainda não informado</p>
+        {% endif %}
+        <details class="correct">
+          <summary>{{ "Corrigir" if row.value else "Informar" }}</summary>
+          <form method="post" action="/comprador/consultor/campo" class="correct-form">
+            <input type="hidden" name="key" value="{{ row.key }}">
+            <label for="campo-{{ row.key }}" class="visually-hidden">{{ row.label }}</label>
+            {% if row.choices %}
+            <select id="campo-{{ row.key }}" name="value">
+              {% for value, label in row.choices.items() %}<option value="{{ value }}"{% if value == row.value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            {% else %}
+            <input id="campo-{{ row.key }}" name="value" type="text" maxlength="100" value="{{ row.value or '' }}" required>
+            {% endif %}
+            <button class="mini-btn" type="submit">Salvar</button>
+          </form>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+
+  </aside>
+</div>
+{% endblock %}

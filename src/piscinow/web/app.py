@@ -22,6 +22,7 @@ from piscinow.web.routes import (
     admin,
     chat,
     comprador,
+    comprador_consultor,
     comprador_projeto,
     galeria,
     health,
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     app.include_router(prestador.router)
     app.include_router(comprador.router)
     app.include_router(comprador_projeto.router)
+    app.include_router(comprador_consultor.router)
     app.include_router(vitrine.router)
     return app
 

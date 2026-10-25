@@ -6,6 +6,7 @@ from types import SimpleNamespace as NS
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from piscinow.qualification.service import known_fields
 from piscinow.web.journey import comprador_journey, stage_overview
 from piscinow.web.navigation import AREAS
 
@@ -40,6 +41,8 @@ PAGES = {
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
     "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
+    "comprador_consultor": ("comprador_consultor.html", "comprador", "/comprador/consultor"),
+    "comprador_consultor_completo": ("comprador_consultor.html", "comprador", "/comprador/consultor"),
     "vitrine_produtos_comprador": ("vitrine_produtos.html", "comprador", "/vitrine/produtos"),
     "vitrine_produtos_visitante": ("vitrine_produtos.html", None, "/vitrine/produtos"),
 }
@@ -103,6 +106,31 @@ def _example_context(name: str) -> dict:
             ("acabamento", "retido", Decimal("3000.00"), "Instalações Sul"),
         ]
         return {"payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")), "stages": stage_overview(rows)}
+    if name in ("comprador_consultor", "comprador_consultor_completo"):
+        complete = name.endswith("completo")
+        field = lambda key, value, source="cliente", verification="declarado": NS(  # noqa: E731
+            key=key, value=value, source=NS(value=source), verification=NS(value=verification)
+        )
+        fields = [field("localizacao", "Valinhos"), field("tipo_piscina", "fibra")]
+        messages = [
+            {"from_agent": True, "text": "Oi, Marina! Eu sou a assistente virtual da Piscinow. Em que cidade fica o terreno?"},
+            {"from_agent": False, "text": "Valinhos. Estou pensando numa piscina de fibra."},
+            {"from_agent": True, "text": "Ótima escolha! Fibra costuma ter uma instalação rápida. Para quando você imagina a obra?"},
+        ]
+        if complete:
+            fields += [field("prazo", "ate_6_meses"), field("dimensoes", "7 x 3 m"), field("orcamento", "30_a_50_mil")]
+            messages += [
+                {"from_agent": False, "text": "Queria começar em uns 4 meses. Uns 7 por 3 metros, e posso investir de 30 a 50 mil."},
+                {"from_agent": True, "text": "Perfeito, já tenho o essencial. Posso compartilhar o seu briefing, sem nome e sem contato, com lojas compatíveis?"},
+            ]
+        return {
+            "messages": messages,
+            "briefing": known_fields(NS(fields=fields)),
+            "missing": [] if complete else ["Prazo desejado"],
+            "consent": "nao_respondido",
+            "attention": False,
+            "unavailable": False,
+        }
     if name in ("vitrine_produtos_comprador", "vitrine_produtos_visitante"):
         logged = name.endswith("comprador")
         return {

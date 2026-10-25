@@ -126,3 +126,46 @@ def test_unknown_or_malformed_member_id_returns_404(client, db_session, member_i
     response = client.post(f"/admin/membros/{member_id}/novo-link-senha")
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize("profile_type, area, list_path", AREAS)
+def test_recovery_never_changes_the_registered_email(client, db_session, profile_type, area, list_path):
+    _logged_in(client, db_session)
+    member = _active_member(db_session, profile_type, email="dono@example.com")
+    client.post(f"/admin/membros/{member.id}/novo-link-senha")
+    db_session.refresh(member)
+    token = member.set_password_token
+
+    form = client.get(f"/{area}/definir-senha/{token}")
+    assert 'value="dono@example.com"' in form.text
+    assert "readonly" in form.text
+
+    response = client.post(
+        f"/{area}/definir-senha/{token}",
+        data={"email": "outro@example.com", "password": "senha-nova-456", "password_confirm": "senha-nova-456"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db_session.refresh(member)
+    assert member.email == "dono@example.com"
+    assert member.verify_password("senha-nova-456") is True
+
+
+@pytest.mark.parametrize("profile_type, area, list_path", AREAS)
+def test_first_access_still_lets_the_person_choose_the_email(client, db_session, profile_type, area, list_path):
+    member = Member(profile_type=profile_type, name="Novo Acesso", status=MemberStatus.APPROVED)
+    token = member.generate_set_password_token()
+    db_session.add(member)
+    db_session.flush()
+
+    form = client.get(f"/{area}/definir-senha/{token}")
+    assert form.status_code == 200
+    assert "readonly" not in form.text
+
+    client.post(
+        f"/{area}/definir-senha/{token}",
+        data={"email": "Escolhido@Example.com", "password": "senha-nova-456", "password_confirm": "senha-nova-456"},
+    )
+    db_session.refresh(member)
+    assert member.email == "escolhido@example.com"

@@ -28,7 +28,7 @@ async def definir_senha_form(token: str, request: Request, db: Session = Depends
     return templates.TemplateResponse(
         request,
         "comprador_definir_senha.html",
-        {"token": token, "invalid": False, "error": None, "email": member.email},
+        {"token": token, "invalid": False, "error": None, "email": member.email, "email_locked": bool(member.password_hash and member.email)},
     )
 
 
@@ -60,6 +60,10 @@ async def definir_senha_submit(
             {"token": token, "invalid": False, "error": "As senhas nao coincidem."},
             status_code=400,
         )
+    if member.password_hash and member.email:
+        # Recovery of an active account: a link never changes the login email.
+        member.set_password(password)
+        return RedirectResponse(url="/comprador/login", status_code=303)
     normalized_email = email.strip().lower()
     existing = db.scalar(
         select(Member).where(

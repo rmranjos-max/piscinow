@@ -11,7 +11,7 @@
         <form method="post" action="/loja/definir-senha/{{ token }}">
           <div class="field">
             <label for="email">E-mail</label>
-            <input id="email" type="email" name="email" value="{{ email or '' }}" required>
+            <input id="email" type="email" name="email" value="{{ email or '' }}"{% if email_locked %} readonly{% endif %} required>
           </div>
           <div class="field">
             <label for="password">Senha</label>

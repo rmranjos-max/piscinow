@@ -1,0 +1,95 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, notice, empty %}
+{% block title %}Propostas{% endblock %}
+{% block content %}
+<p class="eyebrow">Sua oportunidade{% if deal %} · {{ deal.code }}{% endif %}</p>
+<h1>Propostas</h1>
+<p class="sub">Compare as propostas das lojas, converse e peça ajustes. Seus dados de contato só são liberados para a loja que você escolher ao aceitar.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if not deal %}
+<section class="card">
+  {{ empty("Você ainda não tem uma oportunidade em andamento. Converse com a nossa assistente para montar o briefing.") }}
+  <a class="btn accent" href="/comprador/consultor">Conversar com a assistente</a>
+</section>
+{% else %}
+
+{% if accepted %}
+<section class="card cta-card" aria-labelledby="aceita">
+  <div class="row-between"><h2 id="aceita">Proposta aceita</h2>{{ badge("Aceita", "green") }}</div>
+  <p>Você escolheu <b>{{ accepted_store.name }}</b>. A loja recebeu o seu contato e vai falar com você. As demais lojas não têm mais acesso ao seu briefing.</p>
+</section>
+{% endif %}
+
+<section class="card" aria-labelledby="viabilidade">
+  <div class="row-between"><h2 id="viabilidade">Viabilidade do projeto</h2>{{ badge(feasibility_label, "green" if feasibility_label in ("Aprovada", "Aprovada com ressalvas") else "amber") }}</div>
+  {% if caveats %}
+  <p class="muted small">Pontos de atenção apontados pela equipe:</p>
+  <ul class="plain-list">{% for c in caveats %}<li><span>{{ c.label }}</span><b>{{ c.note or "Ressalva registrada" }}</b></li>{% endfor %}</ul>
+  {% endif %}
+  {% if feasibility_notes %}<p>{{ feasibility_notes }}</p>{% endif %}
+  {% if blocker and not accepted %}<p class="muted small">{{ blocker }}</p>{% endif %}
+</section>
+
+{% if stores %}
+<div class="opp-list">
+  {% for entry in stores %}
+  <article class="card" aria-labelledby="loja-{{ entry.decision.id }}">
+    <h2 id="loja-{{ entry.decision.id }}">{{ entry.store.name }}</h2>
+    {% if not entry.proposals %}<p class="muted">Esta loja está analisando o seu projeto e ainda não enviou proposta.</p>{% endif %}
+
+    {% for item in entry.proposals %}
+    <div class="proposal{% if loop.first %} current{% endif %}">
+      <div class="row-between">
+        <b>Versão {{ item.p.version }} · {{ item.total }}</b>
+        {{ badge("Vencida" if item.expired else item.label, "green" if item.p.status.value == "aceita" else ("amber" if item.expired or item.p.status.value in ("recusada", "encerrada") else "")) }}
+      </div>
+      <p class="muted small">Prazo estimado {{ item.p.lead_time_days }} dias · válida até {{ item.p.valid_until.strftime("%d/%m/%Y") }}</p>
+      <ul class="plain-list">{% for description, amount in item["items"] %}<li><span>{{ description }}</span><b>{{ amount }}</b></li>{% endfor %}</ul>
+      <p class="small"><b>Escopo:</b> {{ item.p.scope }}</p>
+      {% if item.p.exclusions %}<p class="small"><b>Não inclui:</b> {{ item.p.exclusions }}</p>{% endif %}
+      {% if item.p.decision_reason %}<p class="small"><b>Motivo da recusa:</b> {{ item.p.decision_reason }}</p>{% endif %}
+
+      {% if item.p.status.value == "enviada" and not item.expired and can_negotiate %}
+        {% if blocker %}
+        <p class="muted small">{{ blocker }}</p>
+        {% else %}
+        <form method="post" action="/comprador/propostas/{{ item.p.id }}/aceitar" class="accept-form">
+          <label class="check"><input type="checkbox" name="confirmo" value="on" required> Li os termos desta versão ({{ item.total }}, prazo de {{ item.p.lead_time_days }} dias) e quero aceitá-la.</label>
+          <button class="btn accent" type="submit">Aceitar esta proposta</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/comprador/propostas/{{ item.p.id }}/recusar" class="review-form">
+          <label class="visually-hidden" for="rec-{{ item.p.id }}">Motivo da recusa</label>
+          <input id="rec-{{ item.p.id }}" name="motivo" type="text" maxlength="500" placeholder="Motivo (obrigatório para recusar)">
+          <button class="btn" type="submit">Recusar</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    <h3>Conversa com a loja</h3>
+    {% if entry.messages %}
+    <ol class="chat-log">
+      {% for m in entry.messages %}
+      <li class="bubble {{ 'user' if m.mine else 'agent' }}"><span class="visually-hidden">{{ "Você" if m.mine else entry.store.name }}: </span>{% if m.revision %}<b>Pedido de revisão.</b> {% endif %}{{ m.text }}</li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+    {% if can_negotiate %}
+    <form class="review-form" method="post" action="/comprador/propostas/loja/{{ entry.decision.id }}/mensagem">
+      <label class="visually-hidden" for="msg-{{ entry.decision.id }}">Mensagem à loja</label>
+      <input id="msg-{{ entry.decision.id }}" name="texto" type="text" maxlength="1000" placeholder="Escreva à loja" required>
+      <button class="btn" type="submit">Enviar mensagem</button>
+      <button class="btn" type="submit" formaction="/comprador/propostas/loja/{{ entry.decision.id }}/revisao">Pedir revisão da proposta</button>
+    </form>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% elif not accepted %}
+{{ empty("Nenhuma loja respondeu ainda. Assim que uma loja analisar o seu projeto, ela aparece aqui.") }}
+{% endif %}
+{% endif %}
+{% endblock %}

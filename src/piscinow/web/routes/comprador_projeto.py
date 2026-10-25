@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from piscinow.agent.llm_provider import LLMProvider
@@ -12,6 +12,7 @@ from piscinow.comprador_auth import require_comprador
 from piscinow.models.member import Member
 from piscinow.models.payment import Payment, PaymentAllocation, PaymentStatus
 from piscinow.models.product import Product, ProductKind
+from piscinow.models.proposal import Proposal, ProposalStatus
 from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
@@ -88,11 +89,19 @@ async def inicio(
         consent=qualification.consent.value if qualification else "nao_respondido",
         deal_code=deal.code if deal else None,
     )
+    open_proposals = 0
+    if deal is not None:
+        open_proposals = db.scalar(
+            select(func.count()).select_from(Proposal).where(
+                Proposal.deal_id == deal.id, Proposal.status == ProposalStatus.ENVIADA
+            )
+        )
     return request.app.state.templates.TemplateResponse(
         request,
         "comprador_inicio.html",
         {"first_name": first_name, "project": project, "product": product, "services": services,
-         "payment": payment, "journey": journey, "consultor": consultor},
+         "payment": payment, "journey": journey, "consultor": consultor,
+         "deal": deal, "open_proposals": open_proposals},
     )
 
 

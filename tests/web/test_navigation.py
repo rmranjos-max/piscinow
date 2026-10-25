@@ -79,7 +79,7 @@ def _active_labels(area_key: str, path: str) -> list[str]:
 def test_the_comprador_menu_follows_the_v3_order_and_starts_at_the_home_page():
     labels = [item.label for item in AREAS["comprador"].items]
 
-    assert labels == ["Início", "Consultor", "Explorar produtos", "Explorar serviços", "Meu projeto", "Acompanhar obra"]
+    assert labels == ["Início", "Consultor", "Propostas", "Explorar produtos", "Explorar serviços", "Meu projeto", "Acompanhar obra"]
     assert AREAS["comprador"].home == "/comprador"
 
 

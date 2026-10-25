@@ -11,7 +11,8 @@ from piscinow.matching.service import EDITABLE, run_matching, set_override, shar
 from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import MessageRole
 from piscinow.models.matching import MatchingDecision, MatchOverride
-from piscinow.models.member import Member
+from piscinow.models.member import Member, ProfileType
+from piscinow.models.proposal import DealMessage, FeasibilityCheck, MessageAuthor, Proposal
 from piscinow.models.qualification import (
     Deal,
     DealEvent,
@@ -19,6 +20,8 @@ from piscinow.models.qualification import (
     FieldSource,
     LeadQualification,
 )
+from piscinow.proposals.rules import FEASIBILITY_ITEMS, ITEM_STATES
+from piscinow.proposals.service import ProposalError, brl, save_feasibility
 from piscinow.qualification.deals import CLOSED, STATUS_LABELS, mark_lost, record_event
 from piscinow.qualification.fields import FIELDS, label_for
 from piscinow.qualification.service import conversation_of, known_fields, refresh_status, set_field
@@ -133,9 +136,52 @@ def _detail_context(db: Session, qualification: LeadQualification, error: str | 
         ],
         "field_keys": {key: definition.label for key, definition in FIELDS.items()},
         "matching": _matching_rows(db, deal) if deal is not None and not closed_deal(deal) else None,
+        **_negotiation_context(db, deal),
         "can_edit_matching": deal is not None and deal.status in EDITABLE,
         "can_share": deal is not None and deal.status == DealStatus.MATCHED,
         "error": error,
+    }
+
+
+PROPOSAL_LABELS = {
+    "enviada": "Em aberto", "substituida": "Substituída", "recusada": "Recusada pelo comprador",
+    "aceita": "Aceita", "encerrada": "Encerrada",
+}
+FEASIBILITY_LABELS = {
+    "pending": "Pendente", "conditionally_approved": "Aprovada com ressalvas", "approved": "Aprovada", "rejected": "Reprovada",
+}
+STATE_LABELS = {"pendente": "Pendente", "ok": "OK", "ressalva": "Ressalva", "impeditivo": "Impeditivo"}
+
+
+def _negotiation_context(db: Session, deal: Deal | None) -> dict:
+    if deal is None:
+        return {"feasibility": None, "proposals_admin": [], "messages_admin": [], "state_options": [], "status_options": []}
+    check = db.scalar(select(FeasibilityCheck).where(FeasibilityCheck.deal_id == deal.id))
+    stored = {i["key"]: i for i in check.items} if check else {}
+    checklist = [
+        {"key": key, "label": label, "state": stored.get(key, {}).get("state", "pendente"), "note": stored.get(key, {}).get("note", "")}
+        for key, label in FEASIBILITY_ITEMS.items()
+    ]
+    stores = {m.id: m.name for m in db.scalars(select(Member).where(Member.profile_type == ProfileType.LOJA))}
+    proposals = [
+        {"store": stores.get(p.partner_member_id, "—"), "p": p, "label": PROPOSAL_LABELS[p.status.value], "total": brl(p.total)}
+        for p in db.scalars(select(Proposal).where(Proposal.deal_id == deal.id).order_by(Proposal.partner_member_id, Proposal.version))
+    ]
+    messages = [
+        {"store": stores.get(m.partner_member_id, "—"), "mine": m.author == MessageAuthor.LOJA, "text": m.text,
+         "revision": m.is_revision_request, "at": m.created_at}
+        for m in db.scalars(select(DealMessage).where(DealMessage.deal_id == deal.id).order_by(DealMessage.created_at))
+    ]
+    return {
+        "feasibility": {
+            "status": check.status.value if check else "pending",
+            "label": FEASIBILITY_LABELS[check.status.value] if check else "Ainda não avaliada",
+            "notes": check.notes if check else "", "decided_by": check.decided_by if check else None,
+            "decided_at": check.decided_at if check else None, "items": checklist,
+        },
+        "proposals_admin": proposals, "messages_admin": messages,
+        "state_options": [(s, STATE_LABELS[s]) for s in ITEM_STATES],
+        "status_options": list(FEASIBILITY_LABELS.items()),
     }
 
 
@@ -303,3 +349,27 @@ async def revisar_loja(
         message = "Decisão inválida." if decisao not in {o.value for o in MatchOverride} else str(exc)
         return _detail_error(request, db, qualification, message)
     return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#matching", status_code=303)
+
+
+@router.post("/{qualification_id}/viabilidade")
+async def salvar_viabilidade(
+    request: Request,
+    qualification_id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    qualification = _qualification_or_404(db, qualification_id)
+    deal = _active_deal_or_404(db, qualification)
+    form = await request.form()
+    items = [
+        {"key": key, "state": str(form.get(f"state_{key}", "")), "note": str(form.get(f"note_{key}", ""))}
+        for key in FEASIBILITY_ITEMS
+    ]
+    try:
+        save_feasibility(
+            db, deal, status=str(form.get("status", "")), items=items, notes=str(form.get("notes", "")),
+            actor=f"admin:{admin.email}",
+        )
+    except ProposalError as exc:
+        return _detail_error(request, db, qualification, " ".join(exc.errors))
+    return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#viabilidade", status_code=303)

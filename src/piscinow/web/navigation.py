@@ -65,6 +65,7 @@ AREAS: dict[str, Area] = {
         items=(
             NavItem("Início", "/comprador", "home", exact=True),
             NavItem("Consultor", "/comprador/consultor", "chat"),
+            NavItem("Propostas", "/comprador/propostas", "doc"),
             NavItem("Explorar produtos", "/vitrine/produtos", "compass"),
             NavItem("Explorar serviços", "/vitrine/servicos", "wrench"),
             NavItem("Meu projeto", "/comprador/projeto", "folder"),

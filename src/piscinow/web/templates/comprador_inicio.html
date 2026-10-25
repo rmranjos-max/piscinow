@@ -25,6 +25,17 @@
     <a class="btn" href="{{ consultor.href }}">{{ consultor.cta }}</a>
   </section>
 
+  {% if deal %}
+  <section class="card" aria-labelledby="propostas">
+    <div class="row-between">
+      <h3 id="propostas">Propostas das lojas</h3>
+      {{ badge("Aceita" if deal.status.value == "accepted" else ("Em aberto" if open_proposals else "Aguardando"), "green" if deal.status.value == "accepted" or open_proposals else "amber") }}
+    </div>
+    <p class="muted">{% if deal.status.value == "accepted" %}Você aceitou uma proposta; a loja escolhida já tem o seu contato.{% elif open_proposals %}{{ open_proposals }} proposta{{ "" if open_proposals == 1 else "s" }} em aberto para comparar.{% else %}As lojas indicadas estão analisando o seu projeto.{% endif %}</p>
+    <a class="btn" href="/comprador/propostas">Ver propostas</a>
+  </section>
+  {% endif %}
+
   <section class="card" aria-labelledby="seu-projeto">
     <div class="row-between">
       <h3 id="seu-projeto">Seu projeto</h3>

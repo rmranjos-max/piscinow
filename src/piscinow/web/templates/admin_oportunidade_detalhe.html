@@ -79,6 +79,62 @@
 {% endif %}
 {% endif %}
 
+{% if deal and feasibility %}
+<section class="card" id="viabilidade" aria-labelledby="viab-titulo">
+  <div class="row-between">
+    <h2 id="viab-titulo">Viabilidade</h2>
+    {{ badge(feasibility.label, "green" if feasibility.status in ("approved", "conditionally_approved") else "amber") }}
+  </div>
+  <p class="muted small">Decisão da equipe. O comprador só consegue aceitar uma proposta com a viabilidade aprovada ou aprovada com ressalvas.{% if feasibility.decided_by %} Última decisão: {{ feasibility.decided_by }}, {{ feasibility.decided_at.strftime("%d/%m/%Y %H:%M") }}.{% endif %}</p>
+  {% if not closed %}
+  <form method="post" action="/admin/oportunidades/{{ qualification.id }}/viabilidade">
+    <div class="tablewrap"><table class="admin-table">
+      <thead><tr><th>Item</th><th>Situação</th><th>Observação</th></tr></thead>
+      <tbody>
+      {% for item in feasibility["items"] %}
+        <tr>
+          <td>{{ item.label }}</td>
+          <td><label class="visually-hidden" for="state-{{ item.key }}">Situação: {{ item.label }}</label>
+            <select id="state-{{ item.key }}" name="state_{{ item.key }}">{% for value, label in state_options %}<option value="{{ value }}"{% if value == item.state %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+          <td><label class="visually-hidden" for="note-{{ item.key }}">Observação: {{ item.label }}</label>
+            <input id="note-{{ item.key }}" name="note_{{ item.key }}" type="text" maxlength="300" value="{{ item.note }}"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <div class="field"><label for="viab-status">Resultado</label>
+      <select id="viab-status" name="status">{% for value, label in status_options %}<option value="{{ value }}"{% if value == feasibility.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="viab-notes">Observações (obrigatórias se reprovada)</label>
+      <textarea id="viab-notes" name="notes" rows="2" maxlength="1000">{{ feasibility.notes or "" }}</textarea></div>
+    <button class="btn accent" type="submit">Salvar viabilidade</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card" id="propostas" aria-labelledby="prop-titulo">
+  <h2 id="prop-titulo">Propostas e negociação</h2>
+  {% if proposals_admin %}
+  <div class="tablewrap"><table class="admin-table">
+    <thead><tr><th>Loja</th><th>Versão</th><th>Total</th><th>Prazo</th><th>Válida até</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for row in proposals_admin %}
+      <tr><td>{{ row.store }}</td><td>Versão {{ row.p.version }}</td><td>{{ row.total }}</td><td>{{ row.p.lead_time_days }} dias</td>
+          <td>{{ row.p.valid_until.strftime("%d/%m/%Y") }}</td><td>{{ badge(row.label, "green" if row.p.status.value == "aceita" else "") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="empty-note">Nenhuma loja enviou proposta ainda.</p>{% endif %}
+  {% if messages_admin %}
+  <h3>Mensagens</h3>
+  <ol class="chat-log">
+    {% for m in messages_admin %}
+    <li class="bubble {{ 'user' if m.mine else 'agent' }}"><b>{{ m.store }}{% if not m.mine %} ← comprador{% endif %}:</b> {% if m.revision %}<b>Pedido de revisão.</b> {% endif %}{{ m.text }}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if matching is not none %}
 <section class="card" id="matching" aria-labelledby="matching-titulo">
   <div class="row-between">

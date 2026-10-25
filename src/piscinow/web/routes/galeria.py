@@ -42,6 +42,7 @@ PAGES = {
     "admin_oportunidade_detalhe": ("admin_oportunidade_detalhe.html", "admin", "/admin/oportunidades"),
     "loja_oportunidades": ("loja_oportunidades.html", "loja", "/loja/oportunidades"),
     "admin_atendimento": ("admin_atendimento.html", "admin", "/admin/lojas"),
+    "comprador_propostas": ("comprador_propostas.html", "comprador", "/comprador/propostas"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
     "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
@@ -180,6 +181,33 @@ def _example_context(name: str) -> dict:
                      "recusada", "Você recusou"),
             ],
         }
+    if name == "comprador_propostas":
+        proposal = lambda version, status, label, total, items, expired=False: {  # noqa: E731
+            "p": NS(id=uid(80 + version), version=version, status=NS(value=status), lead_time_days=45 - version * 5,
+                    valid_until=now.date() + timedelta(days=12), scope="Fornecimento e instalação completa, com 1 visita técnica.",
+                    exclusions="Paisagismo e cercamento", decision_reason=None),
+            "label": label, "expired": expired, "total": total, "items": items,
+        }
+        store = lambda n, name, proposals, messages: {  # noqa: E731
+            "decision": NS(id=uid(90 + n)), "store": NS(name=name, id=uid(100 + n)), "proposals": proposals, "messages": messages,
+        }
+        return {
+            "error": None, "accepted": False, "accepted_store": None, "can_negotiate": True,
+            "deal": NS(code="OP-0007", status=NS(value="proposal_sent")),
+            "feasibility_label": "Aprovada com ressalvas", "feasibility_notes": None, "blocker": None,
+            "caveats": [{"label": "Terreno", "note": "Leve declive no fundo do terreno"}],
+            "stores": [
+                store(1, "Studio Fibra Sul", [
+                    proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00")]),
+                    proposal(1, "substituida", "Substituída por versão mais nova", "R$ 21.000,00",
+                             [("Piscina de fibra 7x3", "R$ 18.000,00"), ("Instalação", "R$ 3.000,00")]),
+                ], [{"mine": True, "text": "Consegue reduzir o valor se eu retirar a instalação?", "revision": True},
+                    {"mine": False, "text": "Posso fazer a versão 2 com o valor fechado.", "revision": False}]),
+                store(2, "Piscinas Campinas", [
+                    proposal(1, "enviada", "Em aberto", "R$ 22.800,00", [("Piscina de fibra 7x3 completa", "R$ 22.800,00")]),
+                ], []),
+            ],
+        }
     if name == "admin_atendimento":
         return {
             "store": NS(id=uid(11), name="Studio Fibra Sul"),
@@ -219,6 +247,30 @@ def _example_context(name: str) -> dict:
                            override="incluida", reason="Atende a região por parceria", response=None),
             ],
             "can_edit_matching": True, "can_share": True,
+            "feasibility": {
+                "status": "conditionally_approved", "label": "Aprovada com ressalvas", "notes": "", "decided_by": "admin:equipe@piscinow.com.br",
+                "decided_at": now,
+                "items": [
+                    {"key": "acesso", "label": "Acesso ao imóvel", "state": "ok", "note": ""},
+                    {"key": "terreno", "label": "Terreno", "state": "ressalva", "note": "Leve declive no fundo do terreno"},
+                    {"key": "escavacao", "label": "Escavação", "state": "ok", "note": ""},
+                    {"key": "hidraulica_eletrica", "label": "Instalações hidráulicas e elétricas", "state": "ok", "note": ""},
+                    {"key": "medidas", "label": "Medidas", "state": "ok", "note": ""},
+                    {"key": "visita", "label": "Necessidade de visita técnica", "state": "pendente", "note": ""},
+                ],
+            },
+            "state_options": [("pendente", "Pendente"), ("ok", "OK"), ("ressalva", "Ressalva"), ("impeditivo", "Impeditivo")],
+            "status_options": [("pending", "Pendente"), ("conditionally_approved", "Aprovada com ressalvas"),
+                               ("approved", "Aprovada"), ("rejected", "Reprovada")],
+            "proposals_admin": [
+                {"store": "Studio Fibra Sul", "p": NS(version=2, lead_time_days=40, valid_until=now.date() + timedelta(days=9), status=NS(value="enviada")),
+                 "label": "Em aberto", "total": "R$ 19.500,00"},
+                {"store": "Studio Fibra Sul", "p": NS(version=1, lead_time_days=45, valid_until=now.date() + timedelta(days=9), status=NS(value="substituida")),
+                 "label": "Substituída", "total": "R$ 21.000,00"},
+            ],
+            "messages_admin": [
+                {"store": "Studio Fibra Sul", "mine": False, "text": "Consegue reduzir o valor sem a instalação?", "revision": True, "at": now},
+            ],
             "error": None,
         }
     if name in ("comprador_consultor", "comprador_consultor_completo"):

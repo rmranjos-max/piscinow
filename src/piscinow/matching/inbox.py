@@ -14,12 +14,28 @@ from piscinow.qualification.projection import partner_briefing
 
 def _visible(decision: MatchingDecision, deal: Deal, qualification: LeadQualification) -> bool:
     """A store sees an opportunity only while it was shared with it and the buyer still allows it."""
+    if deal.status == DealStatus.ACCEPTED and deal.assigned_member_id != decision.partner_member_id:
+        return False  # the buyer chose another store
     return (
         decision.shared_at is not None
         and is_effective(decision.eligible, decision.override.value)
         and deal.status not in CLOSED
         and qualification.consent == ConsentState.CONCEDIDO
     )
+
+
+def decision_is_visible(db: Session, decision: MatchingDecision) -> bool:
+    deal = db.get(Deal, decision.deal_id)
+    return _visible(decision, deal, db.get(LeadQualification, deal.qualification_id))
+
+
+def buyer_contact(db: Session, decision: MatchingDecision) -> dict | None:
+    """The buyer's contact, only for the store the buyer chose by accepting its proposal."""
+    deal = db.get(Deal, decision.deal_id)
+    if deal.status != DealStatus.ACCEPTED or deal.assigned_member_id != decision.partner_member_id:
+        return None
+    buyer = db.get(Member, deal.member_id)
+    return {"nome": buyer.name, "email": buyer.email, "telefone": buyer.phone, "regiao": buyer.region}
 
 
 def inbox_for_partner(db: Session, partner_id) -> list[dict]:
@@ -39,6 +55,8 @@ def inbox_for_partner(db: Session, partner_id) -> list[dict]:
             "decision": decision,
             "briefing": partner_briefing(deal.member_id, qualification.values()),
             "response": decision.response.value,
+            "contact": buyer_contact(db, decision),
+            "deal_id": deal.id,
         })
     return items
 

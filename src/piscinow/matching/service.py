@@ -84,6 +84,7 @@ def _active_shared(db: Session, partner_id):
     return [
         decision for decision, deal in rows
         if deal.status not in CLOSED
+        and not (deal.status == DealStatus.ACCEPTED and deal.assigned_member_id != partner_id)
         and decision.response.value != "recusada"
         and is_effective(decision.eligible, decision.override.value)
     ]

@@ -117,12 +117,29 @@ def test_an_invalid_proposal_shows_every_error_and_saves_nothing(client, db_sess
 
     response = client.post(
         f"/loja/oportunidades/{decisions[loja.id].id}/proposta",
-        data=_form(item_desc=["", ""], item_amount=["", ""], scope="", lead_time_days="abc", valid_until="ontem"),
+        data=_form(item_desc=["", ""], item_amount=["", ""], scope="", lead_time_days="0",
+                   valid_until=date.today().isoformat()),
     )
 
     assert response.status_code == 400
     assert "Inclua ao menos um item" in response.text
     assert "Descreva o escopo" in response.text
+    assert "prazo estimado" in response.text
+    assert "validade deve ser uma data futura" in response.text
+    assert db_session.query(Proposal).count() == 0
+
+
+def test_text_that_is_not_a_number_or_a_date_is_reported_before_the_business_rules(client, db_session):
+    loja = _loja(db_session)
+    _, _, decisions = _shared(db_session, loja)
+    _login(client)
+
+    response = client.post(
+        f"/loja/oportunidades/{decisions[loja.id].id}/proposta", data=_form(lead_time_days="abc", valid_until="ontem")
+    )
+
+    assert response.status_code == 400
+    assert "só com números" in response.text and "como uma data" in response.text
     assert db_session.query(Proposal).count() == 0
 
 

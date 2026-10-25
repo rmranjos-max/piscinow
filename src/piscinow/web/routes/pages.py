@@ -11,12 +11,17 @@ REFERRAL_COOKIE = "piscinow_ref"
 
 
 @router.get("/convite/{code}")
-async def convite(code: str, db: Session = Depends(get_db)):
+async def convite(code: str, request: Request, db: Session = Depends(get_db)):
     referrer = find_referrer(db, code)
     response = RedirectResponse(url="/")
     if referrer is not None:
         response.set_cookie(
-            REFERRAL_COOKIE, code, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax"
+            REFERRAL_COOKIE,
+            code,
+            max_age=60 * 60 * 24 * 30,
+            httponly=True,
+            samesite="lax",
+            secure=request.app.state.cookie_secure,
         )
     return response
 

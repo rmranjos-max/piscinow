@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +15,7 @@ from piscinow.agent.provider_factory import build_llm_provider
 from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
+from piscinow.web.origin_check import OriginCheckMiddleware
 from piscinow.web.routes import admin, chat, comprador, comprador_projeto, loja, pages, prestador, vitrine
 
 logger = logging.getLogger(__name__)
@@ -58,7 +60,15 @@ def create_app() -> FastAPI:
             "Set a real secret before deploying to production."
         )
     app = FastAPI(title="Clube Piscinow", lifespan=lifespan)
-    app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        https_only=is_production,
+        same_site="lax",
+        max_age=settings.session_max_age_seconds,
+    )
+    app.add_middleware(OriginCheckMiddleware, extra_hosts=[urlsplit(settings.public_base_url).netloc])
+    app.state.cookie_secure = is_production
     app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)

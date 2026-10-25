@@ -70,7 +70,12 @@ async def send_message(
     # against the installed FastAPI version), so the cookie must be set
     # directly on the `StreamingResponse` object that is actually returned.
     streaming_response.set_cookie(
-        SESSION_COOKIE, session_id, max_age=60 * 60 * 2, httponly=True, samesite="lax"
+        SESSION_COOKIE,
+        session_id,
+        max_age=60 * 60 * 2,
+        httponly=True,
+        samesite="lax",
+        secure=request.app.state.cookie_secure,
     )
     return streaming_response
 

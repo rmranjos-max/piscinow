@@ -121,6 +121,8 @@ jobs:
           curl -fsS http://127.0.0.1:8000/readyz
           curl -fsS -o /dev/null http://127.0.0.1:8000/
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Origin: https://evil.example' http://127.0.0.1:8000/comprador/login)" = "403"
+          curl -s -D - -o /dev/null http://127.0.0.1:8000/loja/definir-senha/token-inexistente | grep -i '^referrer-policy: no-referrer'
+          ! docker logs app 2>&1 | grep -q 'definir-senha/token-inexistente'
           for i in $(seq 1 40); do
             status="$(docker inspect --format '{{.State.Health.Status}}' app)"
             [ "$status" = "healthy" ] && break
@@ -184,4 +186,6 @@ jobs:
           export DB_EXEC="docker exec -i $(docker ps -q --filter ancestor=pgvector/pgvector:pg16)"
           file="$(bash scripts/backup.sh)"
           ls -l "$file"
+          test "$(stat -c %a "$file")" = "600"
+          test "$(stat -c %a "$(dirname "$file")")" = "700"
           CHECK_SQL="SELECT count(*) FROM admin_users WHERE email = 'backup-test@example.com'" bash scripts/restore-check.sh "$file"

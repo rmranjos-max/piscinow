@@ -8,13 +8,18 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
-	# O token de definir senha viaja na URL; ele nao pode ir parar nos logs de acesso.
+	# O token de definir senha viaja na URL: nao pode ir parar nos logs de acesso,
+	# nem pela propria URL nem pelo cabecalho Referer das requisicoes seguintes.
+	@definir_senha path */definir-senha/*
+	header @definir_senha Referrer-Policy "no-referrer"
+
 	log {
 		output stdout
 		format filter {
 			wrap json
 			fields {
 				request>uri regexp (/definir-senha/)[^/?\s]+ "$1[redigido]"
+				request>headers>Referer regexp (/definir-senha/)[^/?\s]+ "$1[redigido]"
 			}
 		}
 	}

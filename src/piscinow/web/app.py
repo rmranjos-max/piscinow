@@ -16,6 +16,7 @@ from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
 from piscinow.web.origin_check import OriginCheckMiddleware
+from piscinow.web.sensitive_headers import SensitivePathHeadersMiddleware
 from piscinow.web.routes import (
     admin,
     chat,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
         max_age=settings.session_max_age_seconds,
     )
     app.add_middleware(OriginCheckMiddleware, extra_hosts=[urlsplit(settings.public_base_url).netloc])
+    app.add_middleware(SensitivePathHeadersMiddleware)
     app.state.cookie_secure = is_production
     app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES

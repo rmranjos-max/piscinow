@@ -29,4 +29,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
 
 # So o proxy alcanca esta porta (ver docker-compose.yml), entao o X-Forwarded-For dele e confiavel.
 # Sem isso o limite de requisicoes veria todos os visitantes como o IP do proxy.
-CMD ["uvicorn", "piscinow.web.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# --no-access-log: o log de acesso do uvicorn imprimiria o token de /definir-senha/<token>;
+# o registro de acessos fica no proxy, que redige o token.
+CMD ["uvicorn", "piscinow.web.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]

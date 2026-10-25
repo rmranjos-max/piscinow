@@ -4,6 +4,9 @@
 # PGUSER/PGDATABASE (padrao piscinow) e DB_EXEC (como executar um comando no banco).
 set -euo pipefail
 
+# O dump contem hashes de senha e dados pessoais: so o dono pode ler.
+umask 077
+
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 KEEP_DAYS="${KEEP_DAYS:-14}"
 DB_EXEC="${DB_EXEC:-docker compose exec -T db}"
@@ -11,6 +14,7 @@ PGUSER="${PGUSER:-piscinow}"
 PGDATABASE="${PGDATABASE:-piscinow}"
 
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 file="$BACKUP_DIR/piscinow-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
 
 # shellcheck disable=SC2086

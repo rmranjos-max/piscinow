@@ -47,12 +47,14 @@ Nenhuma cobranca real existe nesta versao.
 - `GET /healthz`: o processo esta de pe. `GET /readyz`: o banco responde (503 se nao).
 - O container tem `HEALTHCHECK` e roda sem root. Ver: `docker compose ps`.
 - Logs: `docker compose logs -f app proxy`. O nivel vem de `PISCINOW_LOG_LEVEL` (padrao `INFO`).
-  O proxy troca o token de `/definir-senha/<token>` por `[redigido]` nos logs de acesso.
+  O log de acesso fica no proxy, que troca o token de `/definir-senha/<token>` por `[redigido]` (na URL e no
+  `Referer`); o uvicorn roda com `--no-access-log` justamente para nao imprimir esse token. As paginas de
+  definir senha saem com `Referrer-Policy: no-referrer` e `Cache-Control: no-store`.
 - Postgres (porta nao exposta ao host): `docker compose exec db psql -U piscinow`.
 
 ### Backup e restauracao
 
-    bash scripts/backup.sh                                   # gera backups/piscinow-<data>.sql.gz (guarda 14 dias)
+    bash scripts/backup.sh                                   # gera backups/piscinow-<data>.sql.gz (guarda 14 dias, so o dono le)
     bash scripts/restore-check.sh backups/piscinow-XXXX.sql.gz   # prova que o backup restaura, num banco descartavel
 
 Agende o backup no cron do host (por exemplo, todo dia as 03:00) e **copie a pasta `backups/` para fora

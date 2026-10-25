@@ -94,7 +94,8 @@ def post_message(
     db: Session, decision: MatchingDecision, *, author: MessageAuthor, member: Member, text: str, revision: bool = False
 ) -> DealMessage:
     deal = _deal(db, decision)
-    if not decision_is_visible(db, decision):
+    # The thread exists only with a store that said it will analyze: not one that is still pending or declined.
+    if not decision_is_visible(db, decision) or decision.response != PartnerResponse.EM_ANALISE:
         raise ProposalError("Esta conversa não está disponível.")
     if author == MessageAuthor.COMPRADOR and member.id != deal.member_id:
         raise ProposalError("Esta conversa não está disponível.")

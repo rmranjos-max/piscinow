@@ -5,7 +5,7 @@ import pytest
 
 from piscinow.matching.inbox import inbox_for_partner, respond
 from piscinow.matching.service import run_matching, save_profile, share_with_partners
-from piscinow.models.matching import MatchingDecision
+from piscinow.models.matching import MatchingDecision, PartnerResponse
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.proposal import DealMessage, MessageAuthor, Proposal, ProposalStatus
 from piscinow.models.qualification import DealEvent, DealStatus, FieldSource
@@ -103,7 +103,7 @@ def test_an_invalid_proposal_is_refused_with_every_reason_and_saves_nothing(db_s
 def test_a_store_that_has_not_said_it_will_analyze_cannot_propose(db_session):
     loja = _loja(db_session)
     buyer, qualification, deal, decisions = _setup(db_session, loja)
-    decisions[loja.id].response = decisions[loja.id].response.__class__.PENDENTE
+    decisions[loja.id].response = PartnerResponse.PENDENTE
 
     with pytest.raises(ProposalError):
         _send(db_session, decisions[loja.id])
@@ -310,3 +310,17 @@ def test_only_the_owner_can_reject_and_only_while_the_opportunity_is_open_and_vi
     set_consent(db_session, qualification, False)  # the buyer withdraws: the deal is cancelled
     with pytest.raises(ProposalError):
         reject_proposal(db_session, proposal, buyer, reason="Desisti")
+
+
+def test_no_conversation_exists_with_a_store_that_has_not_agreed_to_analyze_or_that_declined(db_session):
+    pending, declined = _loja(db_session, "Pendente"), _loja(db_session, "Recusou")
+    buyer, _, deal, decisions = _setup(db_session, pending, declined)
+    decisions[pending.id].response = PartnerResponse.PENDENTE
+    respond(db_session, decisions[declined.id], answer="recusada", reason="Sem agenda")
+
+    for store in (pending, declined):
+        with pytest.raises(ProposalError):
+            post_message(db_session, decisions[store.id], author=MessageAuthor.COMPRADOR, member=buyer, text="Olá?")
+        with pytest.raises(ProposalError):
+            post_message(db_session, decisions[store.id], author=MessageAuthor.LOJA, member=store, text="Olá?")
+    assert db_session.query(DealMessage).count() == 0

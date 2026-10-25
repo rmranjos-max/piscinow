@@ -36,3 +36,43 @@ jobs:
 
       - name: Rodar a suite completa (Postgres + pgvector via testcontainers)
         run: pytest -q -rfE --tb=short -p no:cacheprovider
+
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PISCINOW_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar so o necessario para o Alembic
+        run: |
+          pip install --no-deps -e .
+          pip install alembic sqlalchemy "psycopg[binary]" pgvector pydantic-settings argon2-cffi
+
+      - name: Subir as migrations num banco vazio
+        run: alembic upgrade head
+
+      - name: Conferir que os modelos nao divergem das migrations
+        run: alembic check
+
+      - name: Descer tudo e subir de novo
+        run: |
+          alembic downgrade base
+          alembic upgrade head

@@ -6,8 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from piscinow.auth import require_admin
+from piscinow.matching.rules import is_effective
+from piscinow.matching.service import EDITABLE, run_matching, set_override, share_with_partners
 from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import MessageRole
+from piscinow.models.matching import MatchingDecision, MatchOverride
 from piscinow.models.member import Member
 from piscinow.models.qualification import (
     Deal,
@@ -129,8 +132,37 @@ def _detail_context(db: Session, qualification: LeadQualification, error: str | 
             {"from_agent": m.role == MessageRole.AGENT, "text": m.content} for m in conversation.messages
         ],
         "field_keys": {key: definition.label for key, definition in FIELDS.items()},
+        "matching": _matching_rows(db, deal) if deal is not None and not closed_deal(deal) else None,
+        "can_edit_matching": deal is not None and deal.status in EDITABLE,
+        "can_share": deal is not None and deal.status == DealStatus.MATCHED,
         "error": error,
     }
+
+
+def closed_deal(deal: Deal) -> bool:
+    return deal.status in CLOSED
+
+
+RESPONSE_LABELS = {"pendente": "Aguardando resposta", "em_analise": "Vai analisar", "recusada": "Não tem interesse"}
+OVERRIDE_LABELS = {"nenhum": "", "incluida": "Incluída pela equipe", "excluida": "Excluída pela equipe"}
+
+
+def _matching_rows(db: Session, deal: Deal) -> list[dict]:
+    rows = []
+    for decision, store in db.execute(
+        select(MatchingDecision, Member)
+        .join(Member, MatchingDecision.partner_member_id == Member.id)
+        .where(MatchingDecision.deal_id == deal.id)
+        .order_by(Member.name)
+    ):
+        rows.append({
+            "decision": decision, "store": store,
+            "effective": is_effective(decision.eligible, decision.override.value),
+            "override_label": OVERRIDE_LABELS[decision.override.value],
+            "response_label": RESPONSE_LABELS[decision.response.value] if decision.shared_at else None,
+        })
+    rows.sort(key=lambda r: (not r["effective"], r["store"].name))
+    return rows
 
 
 @router.get("/{qualification_id}", response_class=HTMLResponse)
@@ -198,3 +230,76 @@ async def marcar_perdida(
         )
     return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}", status_code=303)
 
+
+
+def _active_deal_or_404(db: Session, qualification: LeadQualification) -> Deal:
+    deal = db.scalar(select(Deal).where(Deal.qualification_id == qualification.id, Deal.status.notin_(CLOSED)))
+    if deal is None:
+        raise HTTPException(status_code=404, detail="Não há oportunidade ativa.")
+    return deal
+
+
+def _detail_error(request: Request, db: Session, qualification: LeadQualification, error: str):
+    return request.app.state.templates.TemplateResponse(
+        request, "admin_oportunidade_detalhe.html", _detail_context(db, qualification, error=error), status_code=400
+    )
+
+
+@router.post("/{qualification_id}/matching/executar")
+async def executar_matching(
+    request: Request,
+    qualification_id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    qualification = _qualification_or_404(db, qualification_id)
+    deal = _active_deal_or_404(db, qualification)
+    try:
+        run_matching(db, deal, actor=f"admin:{admin.email}")
+    except ValueError as exc:
+        return _detail_error(request, db, qualification, str(exc))
+    return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#matching", status_code=303)
+
+
+@router.post("/{qualification_id}/matching/encaminhar")
+async def encaminhar(
+    request: Request,
+    qualification_id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    qualification = _qualification_or_404(db, qualification_id)
+    deal = _active_deal_or_404(db, qualification)
+    try:
+        share_with_partners(db, deal, actor=f"admin:{admin.email}")
+    except ValueError as exc:
+        return _detail_error(request, db, qualification, str(exc))
+    return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#matching", status_code=303)
+
+
+@router.post("/{qualification_id}/matching/{decision_id}/revisao")
+async def revisar_loja(
+    request: Request,
+    qualification_id: str,
+    decision_id: str,
+    decisao: str = Form(...),
+    motivo: str = Form(""),
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    qualification = _qualification_or_404(db, qualification_id)
+    deal = _active_deal_or_404(db, qualification)
+    try:
+        decision = db.get(MatchingDecision, uuid.UUID(decision_id))
+    except ValueError:
+        decision = None
+    # The decision must belong to this very opportunity: the URL never widens what an id can reach.
+    if decision is None or decision.deal_id != deal.id:
+        raise HTTPException(status_code=404)
+    try:
+        override = MatchOverride(decisao)
+        set_override(db, decision, override, reason=motivo, actor=f"admin:{admin.email}")
+    except ValueError as exc:
+        message = "Decisão inválida." if decisao not in {o.value for o in MatchOverride} else str(exc)
+        return _detail_error(request, db, qualification, message)
+    return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#matching", status_code=303)

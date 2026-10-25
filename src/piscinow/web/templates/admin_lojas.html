@@ -4,13 +4,14 @@
       <h1>Lojas aprovadas</h1>
       {% if members %}
       <div class="tablewrap"><table class="admin-table">
-        <thead><tr><th>Nome</th><th>E-mail</th><th>Status</th></tr></thead>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Status</th><th>Atendimento</th></tr></thead>
         <tbody>
         {% for member in members %}
           <tr>
             <td>{{ member.name }}</td>
             <td>{{ member.email or "-" }}</td>
             <td>{% with area = "loja" %}{% include "_member_access_cell.html" %}{% endwith %}</td>
+            <td><a class="mini-btn" href="/admin/lojas/{{ member.id }}/atendimento">Perfil de atendimento</a></td>
           </tr>
         {% endfor %}
         </tbody>

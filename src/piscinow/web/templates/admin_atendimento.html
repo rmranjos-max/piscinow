@@ -1,0 +1,44 @@
+{% extends "app_shell.html" %}
+{% block title %}Atendimento da loja{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin/lojas">Lojas</a></p>
+<h1>Atendimento · {{ store.name }}</h1>
+<p class="sub">Define para quais oportunidades esta loja pode ser indicada. Só a equipe edita este perfil.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<form class="card narrow" method="post" action="/admin/lojas/{{ store.id }}/atendimento">
+  <div class="field">
+    <label for="areas">Cidades atendidas</label>
+    <textarea id="areas" name="areas" rows="3" maxlength="1000" placeholder="Valinhos, Campinas, Vinhedo">{{ form.areas }}</textarea>
+    <p class="muted small">Separe por vírgula ou por linha. A cidade do comprador precisa conter o nome inteiro.</p>
+  </div>
+
+  <fieldset class="field check-group">
+    <legend>Tipos de piscina</legend>
+    {% for value, label in pool_types.items() %}
+    <label class="check"><input type="checkbox" name="pool_types" value="{{ value }}"{% if value in form.pool_types %} checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+
+  <fieldset class="field check-group">
+    <legend>Faixas de orçamento</legend>
+    {% for value, label in budget_bands.items() %}
+    <label class="check"><input type="checkbox" name="budget_bands" value="{{ value }}"{% if value in form.budget_bands %} checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+    <p class="muted small">Compradores que não informaram o orçamento não são barrados por este critério.</p>
+  </fieldset>
+
+  <div class="field">
+    <label for="capacity">Capacidade (oportunidades em andamento ao mesmo tempo)</label>
+    <input id="capacity" name="capacity" type="number" min="1" max="999" value="{{ form.capacity }}" required>
+  </div>
+
+  <label class="check"><input type="checkbox" name="active" value="on"{% if form.active %} checked{% endif %}> Perfil ativo (receber novas indicações)</label>
+
+  <div class="row-actions" style="margin-top:16px">
+    <button class="btn accent" type="submit">Salvar</button>
+    <a class="btn" href="/admin/lojas">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

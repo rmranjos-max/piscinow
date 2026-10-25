@@ -79,6 +79,65 @@
 {% endif %}
 {% endif %}
 
+{% if matching is not none %}
+<section class="card" id="matching" aria-labelledby="matching-titulo">
+  <div class="row-between">
+    <h2 id="matching-titulo">Matching com lojas</h2>
+    {% if can_edit_matching %}
+    <form method="post" action="/admin/oportunidades/{{ qualification.id }}/matching/executar">
+      <button class="btn{% if not matching %} accent{% endif %}" type="submit">{{ "Executar de novo" if matching else "Executar matching" }}</button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="muted small">Critérios objetivos, sem IA: loja aprovada, perfil ativo, cidade, tipo de piscina, faixa de orçamento e capacidade. A equipe revisa antes de encaminhar.</p>
+
+  {% if matching %}
+  <div class="tablewrap"><table class="admin-table">
+    <thead><tr><th>Loja</th><th>Resultado</th><th>Justificativa</th><th>Revisão</th></tr></thead>
+    <tbody>
+    {% for row in matching %}
+      <tr>
+        <td><b>{{ row.store.name }}</b>{% if row.response_label %}<br><span class="muted small">{{ row.response_label }}{% if row.decision.response_reason %}: {{ row.decision.response_reason }}{% endif %}</span>{% endif %}</td>
+        <td>
+          {{ badge("Receberá o briefing" if row.effective else "Não receberá", "green" if row.effective else "amber") }}
+          <br><span class="muted small">Sistema: {{ "elegível" if row.decision.eligible else "inelegível" }}</span>
+          {% if row.override_label %}<br><span class="muted small">{{ row.override_label }}: {{ row.decision.override_reason }}</span>{% endif %}
+        </td>
+        <td>
+          <ul class="criteria">
+            {% for c in row.decision.criteria %}<li class="{{ 'ok' if c.passed else 'no' }}"><span aria-hidden="true">{{ "✓" if c.passed else "✗" }}</span><span><span class="visually-hidden">{{ "Atende" if c.passed else "Não atende" }}: </span>{{ c.label }} — {{ c.detail }}</span></li>{% endfor %}
+          </ul>
+        </td>
+        <td>
+          {% if can_edit_matching %}
+          <form class="review-form" method="post" action="/admin/oportunidades/{{ qualification.id }}/matching/{{ row.decision.id }}/revisao">
+            <label class="visually-hidden" for="motivo-{{ row.decision.id }}">Motivo</label>
+            <input id="motivo-{{ row.decision.id }}" name="motivo" type="text" maxlength="500" placeholder="Motivo">
+            {% if row.decision.override.value != "nenhum" %}
+            <button class="mini-btn" type="submit" name="decisao" value="nenhum">Desfazer revisão</button>
+            {% elif row.decision.eligible %}
+            <button class="mini-btn" type="submit" name="decisao" value="excluida">Excluir</button>
+            {% else %}
+            <button class="mini-btn" type="submit" name="decisao" value="incluida">Incluir mesmo assim</button>
+            {% endif %}
+          </form>
+          {% else %}<span class="muted small">Encaminhado em {{ row.decision.shared_at.strftime("%d/%m/%Y") if row.decision.shared_at else "—" }}</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if can_share %}
+  <form method="post" action="/admin/oportunidades/{{ qualification.id }}/matching/encaminhar">
+    <button class="btn accent" type="submit">Encaminhar às lojas selecionadas</button>
+  </form>
+  {% endif %}
+  {% elif can_edit_matching %}
+  <p class="empty-note">Matching ainda não executado.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card" aria-labelledby="conversa">
   <h2 id="conversa">Conversa com a assistente</h2>
   <ol class="chat-log">

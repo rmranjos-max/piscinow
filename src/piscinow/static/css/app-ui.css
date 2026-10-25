@@ -295,6 +295,15 @@ details.shortcut { margin-bottom: 16px; }
 .origin { font-size: 12px; color: var(--muted); }
 .correct summary { font-size: 13px; color: var(--link); }
 .correct-form { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); margin: 6px 0; }
+.check-group { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.check-group legend { font-size: 13px; font-weight: 700; color: var(--muted); padding: 0 6px; }
+.criteria { margin: 6px 0 0; padding: 0; list-style: none; font-size: 13px; }
+.criteria li { display: flex; gap: 8px; }
+.criteria .ok { color: var(--badge-green-text); }
+.criteria .no { color: var(--danger); }
+.review-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.review-form input { flex: 1 1 180px; min-width: 0; }
 .filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 6px; }
 .filter-tabs a { padding: 7px 13px; border-radius: 100px; border: 1px solid var(--line); background: var(--surface); color: var(--nav-text); font-size: 13px; font-weight: 700; text-decoration: none; }
 .filter-tabs a[aria-current="page"] { background: var(--nav-active-bg); color: var(--nav-active-text); border-color: var(--link); }

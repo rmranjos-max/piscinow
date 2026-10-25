@@ -40,6 +40,7 @@ PAGES = {
     "loja_produtos": ("loja_produtos.html", "loja", "/loja/produtos"),
     "admin_oportunidades": ("admin_oportunidades.html", "admin", "/admin/oportunidades"),
     "admin_oportunidade_detalhe": ("admin_oportunidade_detalhe.html", "admin", "/admin/oportunidades"),
+    "admin_atendimento": ("admin_atendimento.html", "admin", "/admin/lojas"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
     "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
@@ -48,6 +49,21 @@ PAGES = {
     "vitrine_produtos_comprador": ("vitrine_produtos.html", "comprador", "/vitrine/produtos"),
     "vitrine_produtos_visitante": ("vitrine_produtos.html", None, "/vitrine/produtos"),
 }
+
+
+def _match_row(store, eligible, checks, override="nenhum", reason=None, response=None):
+    effective = override == "incluida" or (eligible and override != "excluida")
+    return {
+        "store": NS(name=store),
+        "decision": NS(
+            id=uuid.UUID(int=hash(store) % 10**9), eligible=eligible, override=NS(value=override), override_reason=reason,
+            response_reason=None, shared_at=None,
+            criteria=[{"label": label, "passed": passed, "detail": detail} for label, passed, detail in checks],
+        ),
+        "effective": effective,
+        "override_label": {"incluida": "Incluída pela equipe", "excluida": "Excluída pela equipe"}.get(override, ""),
+        "response_label": response,
+    }
 
 
 def _example_context(name: str) -> dict:
@@ -128,6 +144,15 @@ def _example_context(name: str) -> dict:
                  "qualification": NS(id=uid(90), attention_note="Sem resposta após 3 perguntas: Localização")},
             ],
         }
+    if name == "admin_atendimento":
+        return {
+            "store": NS(id=uid(11), name="Studio Fibra Sul"),
+            "form": {"areas": "Valinhos, Campinas, Vinhedo", "pool_types": ["fibra", "vinil"],
+                     "budget_bands": ["30_a_50_mil", "acima_de_50_mil"], "capacity": 3, "active": True, "exists": True},
+            "pool_types": {"fibra": "Fibra", "vinil": "Vinil", "alvenaria": "Alvenaria"},
+            "budget_bands": {"ate_30_mil": "Até R$ 30 mil", "30_a_50_mil": "R$ 30 a 50 mil", "acima_de_50_mil": "Acima de R$ 50 mil"},
+            "error": None,
+        }
     if name == "admin_oportunidade_detalhe":
         field = lambda key, value, source="cliente": NS(  # noqa: E731
             key=key, value=value, source=NS(value=source), verification=NS(value="declarado")
@@ -149,6 +174,15 @@ def _example_context(name: str) -> dict:
                 {"from_agent": False, "text": "Valinhos. Fibra, uns 7 por 3."},
             ],
             "field_keys": {"localizacao": "Localização", "prazo": "Prazo desejado"},
+            "matching": [
+                _match_row("Studio Fibra Sul", True, [("Loja aprovada no Clube", True, "Aprovada"), ("Cidade atendida", True, "Atende Valinhos"),
+                                                       ("Tipo de piscina", True, "Trabalha com fibra"), ("Capacidade livre", True, "1 de 3 oportunidades em andamento")]),
+                _match_row("Vinil & Cia", False, [("Loja aprovada no Clube", True, "Aprovada"), ("Cidade atendida", False, "Não atende Valinhos"),
+                                                   ("Tipo de piscina", False, "Não trabalha com fibra")]),
+                _match_row("Piscinas Campinas", False, [("Cidade atendida", False, "Não atende Valinhos")],
+                           override="incluida", reason="Atende a região por parceria", response=None),
+            ],
+            "can_edit_matching": True, "can_share": True,
             "error": None,
         }
     if name in ("comprador_consultor", "comprador_consultor_completo"):

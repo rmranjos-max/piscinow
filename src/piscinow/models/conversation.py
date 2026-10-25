@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, Text
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,6 +24,8 @@ class Conversation(Base):
         SAEnum(ProfileType, name="profile_type"), nullable=True
     )
     collected_fields: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # "landing" = public onboarding chat; "qualificacao" = the logged-in buyer's consultant chat.
+    purpose: Mapped[str] = mapped_column(String(20), default="landing", server_default=text("'landing'"))
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

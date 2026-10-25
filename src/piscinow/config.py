@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "production"] = "development"
     allow_payment_simulation: bool = False
     session_max_age_seconds: int = 7 * 24 * 3600
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     database_url: str = "postgresql+psycopg://piscinow:piscinow@localhost:5432/piscinow"
     llm_provider: str = "fake"  # "anthropic" | "openai" | "fake"

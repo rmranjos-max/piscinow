@@ -1,0 +1,13 @@
+.git
+.github
+.worktrees
+.superpowers
+.pytest_cache
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+tests
+docs
+prototypes
+backups

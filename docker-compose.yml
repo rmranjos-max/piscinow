@@ -1,28 +1,54 @@
 services:
   db:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: piscinow
-      POSTGRES_PASSWORD: piscinow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD (use openssl rand -hex 24)}
       POSTGRES_DB: piscinow
     volumes:
       - piscinow_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U piscinow -d piscinow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build: .
+    restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      PISCINOW_DATABASE_URL: postgresql+psycopg://piscinow:piscinow@db:5432/piscinow
+      PISCINOW_DATABASE_URL: postgresql+psycopg://piscinow:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/piscinow
       PISCINOW_ENVIRONMENT: ${PISCINOW_ENVIRONMENT:-production}
       PISCINOW_ALLOW_PAYMENT_SIMULATION: ${PISCINOW_ALLOW_PAYMENT_SIMULATION:-false}
       PISCINOW_LLM_PROVIDER: ${PISCINOW_LLM_PROVIDER:-fake}
       PISCINOW_ANTHROPIC_API_KEY: ${PISCINOW_ANTHROPIC_API_KEY:-}
       PISCINOW_OPENAI_API_KEY: ${PISCINOW_OPENAI_API_KEY:-}
       PISCINOW_SESSION_SECRET: ${PISCINOW_SESSION_SECRET:?session secret required}
-      PISCINOW_PUBLIC_BASE_URL: ${PISCINOW_PUBLIC_BASE_URL:-http://localhost:8000}
+      PISCINOW_PUBLIC_BASE_URL: ${PISCINOW_PUBLIC_BASE_URL:-https://localhost}
+    # Sem "ports": so o proxy alcanca o app, o que torna confiavel o X-Forwarded-For.
+    expose:
+      - "8000"
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      PISCINOW_DOMAIN: ${PISCINOW_DOMAIN:-localhost}
     ports:
-      - "8000:8000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   piscinow_db_data:
+  caddy_data:
+  caddy_config:

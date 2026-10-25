@@ -16,7 +16,17 @@ from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
 from piscinow.web.origin_check import OriginCheckMiddleware
-from piscinow.web.routes import admin, chat, comprador, comprador_projeto, loja, pages, prestador, vitrine
+from piscinow.web.routes import (
+    admin,
+    chat,
+    comprador,
+    comprador_projeto,
+    health,
+    loja,
+    pages,
+    prestador,
+    vitrine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +58,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # No-op under pytest/uvicorn when the root logger already has handlers.
+    logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     is_production = settings.environment == "production"
     if settings.session_secret == INSECURE_SESSION_SECRET:
         if is_production:
@@ -92,6 +104,7 @@ def create_app() -> FastAPI:
         logger.warning("Pagamentos em modo de simulacao: nenhuma cobranca ou repasse real.")
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.include_router(health.router)
     app.include_router(pages.router)
     app.include_router(chat.router)
     app.include_router(admin.router)

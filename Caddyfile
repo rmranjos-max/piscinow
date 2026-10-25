@@ -1,0 +1,23 @@
+{$PISCINOW_DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# O token de definir senha viaja na URL; ele nao pode ir parar nos logs de acesso.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp (/definir-senha/)[^/?\s]+ "$1[redigido]"
+			}
+		}
+	}
+
+	reverse_proxy app:8000
+}

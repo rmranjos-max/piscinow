@@ -8,6 +8,8 @@ class FakePaymentProvider(PaymentProvider):
     """Deterministic in-memory provider for tests: records every charge/release
     call for inspection, and can be configured to simulate a failure."""
 
+    is_simulation = True
+
     def __init__(self, *, should_fail_charge: bool = False, should_fail_release: bool = False):
         self.should_fail_charge = should_fail_charge
         self.should_fail_release = should_fail_release

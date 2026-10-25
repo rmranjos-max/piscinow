@@ -21,7 +21,7 @@ from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
-from piscinow.web.deps import get_db, get_payment_provider
+from piscinow.web.deps import get_db, get_payment_provider, require_payments_enabled
 
 router = APIRouter(prefix="/admin")
 
@@ -369,7 +369,9 @@ async def pagamento_detalhe(
     )
 
 
-@router.post("/pagamentos/{payment_id}/fases/{stage}/liberar")
+@router.post(
+    "/pagamentos/{payment_id}/fases/{stage}/liberar", dependencies=[Depends(require_payments_enabled)]
+)
 async def liberar_fase(
     payment_id: str,
     stage: str,

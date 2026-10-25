@@ -25,9 +25,16 @@
         </tbody>
       </table>
       {% if payment.status.value == "pendente" %}
+      {% if request.app.state.payments_enabled %}
+      {% if request.app.state.payments_simulated %}
+      <p class="empty-note">Modo de simula&ccedil;&atilde;o: nenhuma cobran&ccedil;a real ser&aacute; feita.</p>
+      {% endif %}
       <form method="post" action="/comprador/projeto/pagamento/pagar">
         <button class="btn accent" type="submit">Pagar</button>
       </form>
+      {% else %}
+      <p class="empty-note">O pagamento online ainda n&atilde;o est&aacute; dispon&iacute;vel.</p>
+      {% endif %}
       {% else %}
       <p class="empty-note">Pagamento realizado.</p>
       {% endif %}

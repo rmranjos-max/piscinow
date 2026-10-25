@@ -25,7 +25,7 @@
         {{ group.stage.value | capitalize }}
         {% if group.all_released %}(liberado){% endif %}
       </h2>
-      {% if payment.status.value == "pago" and not group.all_released %}
+      {% if payment.status.value == "pago" and not group.all_released and request.app.state.payments_enabled %}
       <form method="post" action="/admin/pagamentos/{{ payment.id }}/fases/{{ group.stage.value }}/liberar">
         <button class="mini-btn" type="submit">Liberar fase</button>
       </form>

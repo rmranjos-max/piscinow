@@ -18,6 +18,8 @@ from piscinow.web.routes import admin, chat, comprador, comprador_projeto, loja,
 
 logger = logging.getLogger(__name__)
 
+INSECURE_SESSION_SECRET = "change-me-in-production"
+
 _HERE = Path(__file__).resolve().parent
 
 TEMPLATES = Jinja2Templates(directory=str(_HERE / "templates"))
@@ -44,7 +46,13 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    if settings.session_secret == "change-me-in-production":
+    is_production = settings.environment == "production"
+    if settings.session_secret == INSECURE_SESSION_SECRET:
+        if is_production:
+            raise RuntimeError(
+                "PISCINOW_SESSION_SECRET esta com o valor padrao inseguro. "
+                "Defina um segredo real antes de subir em producao."
+            )
         logger.warning(
             "PISCINOW_SESSION_SECRET is using the insecure default value. "
             "Set a real secret before deploying to production."
@@ -54,11 +62,24 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(_HERE.parent / "static")), name="static")
     app.state.templates = TEMPLATES
     app.state.llm_provider = build_llm_provider(settings)
-    app.state.payment_provider = FakePaymentProvider()
-    logger.warning(
-        "Pagamentos estao usando FakePaymentProvider: nenhuma cobranca ou repasse real esta "
-        "sendo processado. Configure um provider real antes de ir para producao."
+    payment_provider = FakePaymentProvider()
+    app.state.payment_provider = payment_provider
+    app.state.payments_simulated = payment_provider.is_simulation
+    app.state.payments_enabled = (
+        not payment_provider.is_simulation or not is_production or settings.allow_payment_simulation
     )
+    if payment_provider.is_simulation and is_production and settings.allow_payment_simulation:
+        logger.error(
+            "Producao com PISCINOW_ALLOW_PAYMENT_SIMULATION ligado: pagamentos sao SIMULADOS, "
+            "nenhuma cobranca ou repasse real esta sendo processado."
+        )
+    elif payment_provider.is_simulation and is_production:
+        logger.warning(
+            "Pagamentos desligados em producao: o provider atual e uma simulacao. "
+            "Configure um provider real para habilitar pagar e liberar fases."
+        )
+    elif payment_provider.is_simulation:
+        logger.warning("Pagamentos em modo de simulacao: nenhuma cobranca ou repasse real.")
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(pages.router)

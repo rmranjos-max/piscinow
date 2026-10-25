@@ -1,8 +1,13 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="PISCINOW_")
+
+    environment: Literal["development", "production"] = "development"
+    allow_payment_simulation: bool = False
 
     database_url: str = "postgresql+psycopg://piscinow:piscinow@localhost:5432/piscinow"
     llm_provider: str = "fake"  # "anthropic" | "openai" | "fake"

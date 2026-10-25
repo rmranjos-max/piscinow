@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
 from piscinow.agent.llm_provider import LLMProvider
@@ -29,3 +29,8 @@ def get_llm_provider(request: Request) -> LLMProvider:
 
 def get_payment_provider(request: Request) -> PaymentProvider:
     return request.app.state.payment_provider
+
+
+def require_payments_enabled(request: Request) -> None:
+    if not request.app.state.payments_enabled:
+        raise HTTPException(status_code=503, detail="Pagamentos indisponiveis no momento.")

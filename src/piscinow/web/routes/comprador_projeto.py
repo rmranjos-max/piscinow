@@ -16,7 +16,7 @@ from piscinow.models.project import Project, ProjectService, ProjectStatus
 from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import limiter, chat_rate_limit_string
-from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider
+from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider, require_payments_enabled
 
 router = APIRouter(prefix="/comprador")
 
@@ -239,7 +239,7 @@ async def ver_pagamento(
     )
 
 
-@router.post("/projeto/pagamento/pagar")
+@router.post("/projeto/pagamento/pagar", dependencies=[Depends(require_payments_enabled)])
 async def pagar(
     request: Request,
     db: Session = Depends(get_db),

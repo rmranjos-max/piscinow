@@ -10,6 +10,10 @@ class PaymentProvider(ABC):
     """Provider-agnostic interface: charge the buyer once, release retained
     amounts to recipients per payment stage as work progresses."""
 
+    # True for providers that move no real money. Production refuses to use them
+    # unless simulation is explicitly allowed.
+    is_simulation: bool = False
+
     @abstractmethod
     async def charge(self, *, amount: Decimal, external_reference: str) -> str:
         """Charge the buyer the full amount. Returns an external charge id."""

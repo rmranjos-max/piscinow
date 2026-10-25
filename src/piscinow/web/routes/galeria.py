@@ -40,6 +40,7 @@ PAGES = {
     "loja_produtos": ("loja_produtos.html", "loja", "/loja/produtos"),
     "admin_oportunidades": ("admin_oportunidades.html", "admin", "/admin/oportunidades"),
     "admin_oportunidade_detalhe": ("admin_oportunidade_detalhe.html", "admin", "/admin/oportunidades"),
+    "loja_oportunidades": ("loja_oportunidades.html", "loja", "/loja/oportunidades"),
     "admin_atendimento": ("admin_atendimento.html", "admin", "/admin/lojas"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
@@ -142,6 +143,24 @@ def _example_context(name: str) -> dict:
             "waiting": [
                 {"buyer": NS(name="Paulo Ribeiro"), "summary": "Fibra",
                  "qualification": NS(id=uid(90), attention_note="Sem resposta após 3 perguntas: Localização")},
+            ],
+        }
+    if name == "loja_oportunidades":
+        item = lambda n, code, campos, response, label: {  # noqa: E731
+            "decision": NS(id=uid(70 + n), response_reason="Agenda cheia até dezembro" if response == "recusada" else None),
+            "briefing": {"codigo": code, "campos": [{"rotulo": r, "valor": v} for r, v in campos]},
+            "response": response, "response_label": label,
+        }
+        return {
+            "error": None,
+            "items": [
+                item(1, "Cliente #A3F1", [("Localização", "Valinhos"), ("Tipo de piscina", "Fibra"), ("Dimensões", "7 x 3 m"),
+                                         ("Prazo desejado", "Até 90 dias"), ("Orçamento", "R$ 30 a 50 mil")],
+                     "pendente", "Aguardando a sua resposta"),
+                item(2, "Cliente #09BC", [("Localização", "Campinas"), ("Tipo de piscina", "Ainda não sei"), ("Prazo desejado", "Até 6 meses")],
+                     "em_analise", "Você vai analisar"),
+                item(3, "Cliente #77D2", [("Localização", "Vinhedo"), ("Tipo de piscina", "Vinil"), ("Prazo desejado", "Sem prazo definido")],
+                     "recusada", "Você recusou"),
             ],
         }
     if name == "admin_atendimento":

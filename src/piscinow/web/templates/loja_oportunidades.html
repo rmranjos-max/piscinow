@@ -1,0 +1,38 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, empty %}
+{% block title %}Oportunidades{% endblock %}
+{% block content %}
+<p class="eyebrow">Comercial</p>
+<h1>Oportunidades</h1>
+<p class="sub">Compradores que a equipe da Piscinow indicou para a sua loja. Você vê o projeto, sem nome e sem contato; os dados de contato só são liberados se o comprador aceitar uma proposta.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if items %}
+<div class="opp-list">
+  {% for item in items %}
+  <article class="card" aria-labelledby="opp-{{ item.decision.id }}">
+    <div class="row-between">
+      <h2 id="opp-{{ item.decision.id }}">{{ item.briefing.codigo }}</h2>
+      {{ badge(item.response_label, "green" if item.response == "em_analise" else ("amber" if item.response == "recusada" else "")) }}
+    </div>
+    <ul class="plain-list">
+      {% for campo in item.briefing.campos %}<li><span>{{ campo.rotulo }}</span><b>{{ campo.valor }}</b></li>{% endfor %}
+    </ul>
+    {% if item.response == "pendente" or item.response == "em_analise" %}
+    <form class="review-form" method="post" action="/loja/oportunidades/{{ item.decision.id }}/resposta">
+      <label class="visually-hidden" for="motivo-{{ item.decision.id }}">Motivo, se for recusar</label>
+      <input id="motivo-{{ item.decision.id }}" name="motivo" type="text" maxlength="500" placeholder="Motivo (obrigatório para recusar)">
+      {% if item.response == "pendente" %}<button class="btn accent" type="submit" name="decisao" value="em_analise">Vou analisar</button>{% endif %}
+      <button class="btn" type="submit" name="decisao" value="recusada">Não tenho interesse</button>
+    </form>
+    {% else %}
+    <p class="muted small">Motivo informado: {{ item.decision.response_reason }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+{{ empty("Nenhuma oportunidade indicada para a sua loja no momento.") }}
+{% endif %}
+{% endblock %}

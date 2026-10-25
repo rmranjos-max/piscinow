@@ -304,6 +304,9 @@ details.shortcut { margin-bottom: 16px; }
 .criteria .no { color: var(--danger); }
 .review-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
 .review-form input { flex: 1 1 180px; min-width: 0; }
+.opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+.opp-list .card { margin-bottom: 0; }
+.form-actions { margin-top: 16px; }
 .filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 6px; }
 .filter-tabs a { padding: 7px 13px; border-radius: 100px; border: 1px solid var(--line); background: var(--surface); color: var(--nav-text); font-size: 13px; font-weight: 700; text-decoration: none; }
 .filter-tabs a[aria-current="page"] { background: var(--nav-active-bg); color: var(--nav-active-text); border-color: var(--link); }

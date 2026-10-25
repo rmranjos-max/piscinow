@@ -1,0 +1,14 @@
+{% if member.password_hash %}
+  Ativo{% if member.set_password_token %} — redefini&ccedil;&atilde;o de senha pendente{% endif %}
+{% elif member.set_password_token %}
+  Aguardando defini&ccedil;&atilde;o de senha
+{% else %}
+  Sem acesso gerado
+{% endif %}
+{% if member.set_password_token %}
+  <br><span class="mono">{{ base_url }}/{{ area }}/definir-senha/{{ member.set_password_token }}</span>
+  <br><small>v&aacute;lido at&eacute; {{ member.set_password_token_expires_at.strftime("%d/%m %H:%M") }} (UTC)</small>
+{% endif %}
+<form method="post" action="/admin/membros/{{ member.id }}/novo-link-senha" style="margin-top:6px;">
+  <button class="mini-btn" type="submit">{% if member.password_hash %}Gerar link de nova senha{% else %}Gerar novo link de acesso{% endif %}</button>
+</form>

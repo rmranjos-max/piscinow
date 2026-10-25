@@ -61,3 +61,13 @@ Agende o backup no cron do host (por exemplo, todo dia as 03:00) e **copie a pas
 da VPS**: um backup no mesmo disco nao protege contra a perda da maquina. Rode o `restore-check` depois
 de cada mudanca de schema e ao menos uma vez por mes. Para restaurar de verdade, pare o app, recrie o
 banco e carregue o arquivo: `gunzip -c arquivo.sql.gz | docker compose exec -T db psql -U piscinow -d piscinow`.
+
+### Recuperar o acesso de alguem
+
+Nao ha envio de e-mail, entao a recuperacao e mediada pela equipe: confirme a identidade da pessoa por fora
+(telefone, WhatsApp), abra a lista dela no painel (`/admin/lojas`, `/admin/prestadores` ou `/admin/compradores`),
+clique em **Gerar link de nova senha** e envie o link que aparece. O link vale 24 horas, serve uma vez, e a senha
+antiga continua valendo ate a pessoa definir a nova. Cada geracao fica no log com o e-mail do admin e o membro.
+
+Se o proprio admin esquecer a senha (o mesmo comando cria um admin novo ou troca a senha de um existente), rode no servidor:
+`docker compose run --rm app python -m piscinow.scripts.create_admin <email> "<nova-senha>"`.

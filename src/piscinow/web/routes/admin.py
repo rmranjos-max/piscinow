@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+import logging
+import uuid
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -24,6 +26,17 @@ from piscinow.rate_limit import admin_login_rate_limit_string, limiter
 from piscinow.web.deps import get_db, get_payment_provider, require_payments_enabled
 
 router = APIRouter(prefix="/admin")
+
+logger = logging.getLogger(__name__)
+
+# Where each profile's access list lives; also the set of profiles that can have a password reset.
+_ACCESS_LIST_PATH = {
+    ProfileType.LOJA: "/admin/lojas",
+    ProfileType.PRESTADOR: "/admin/prestadores",
+    ProfileType.COMPRADOR: "/admin/compradores",
+}
+# A reset replaces a password that already works, so its link lives shorter than a first-access link.
+PASSWORD_RESET_VALIDITY = timedelta(hours=24)
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -167,6 +180,25 @@ async def compradores(
     return templates.TemplateResponse(
         request, "admin_compradores.html", {"members": items, "base_url": base_url}
     )
+
+
+@router.post("/membros/{member_id}/novo-link-senha")
+async def novo_link_senha(
+    member_id: str,
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    try:
+        parsed_id = uuid.UUID(member_id)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    member = db.get(Member, parsed_id)
+    if member is None or member.status != MemberStatus.APPROVED or member.profile_type not in _ACCESS_LIST_PATH:
+        raise HTTPException(status_code=404)
+    # The previous password stays valid until the person sets a new one, so a stray click locks nobody out.
+    member.generate_set_password_token(valid_for=PASSWORD_RESET_VALIDITY)
+    logger.info("admin=%s gerou link de senha para membro=%s perfil=%s", admin.email, member.id, member.profile_type.value)
+    return RedirectResponse(url=_ACCESS_LIST_PATH[member.profile_type], status_code=303)
 
 
 @router.get("/pagamentos", response_class=HTMLResponse)

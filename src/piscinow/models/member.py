@@ -88,10 +88,10 @@ class Member(Base):
         self.approved_by = "referral"
         self.approved_at = datetime.now(timezone.utc)
 
-    def generate_set_password_token(self) -> str:
+    def generate_set_password_token(self, *, valid_for: timedelta = timedelta(days=7)) -> str:
         token = secrets.token_urlsafe(32)
         self.set_password_token = token
-        self.set_password_token_expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        self.set_password_token_expires_at = datetime.now(timezone.utc) + valid_for
         return token
 
     def consume_set_password_token(self, token: str) -> bool:

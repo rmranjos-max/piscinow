@@ -26,6 +26,9 @@ class AdminUser(Base):
     def create(cls, *, email: str, password: str) -> "AdminUser":
         return cls(email=email, password_hash=_hasher.hash(password))
 
+    def set_password(self, password: str) -> None:
+        self.password_hash = _hasher.hash(password)
+
     def verify_password(self, password: str) -> bool:
         try:
             return _hasher.verify(self.password_hash, password)

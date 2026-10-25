@@ -63,7 +63,9 @@ async def definir_senha_form(token: str, request: Request, db: Session = Depends
             request, "loja_definir_senha.html", {"token": token, "invalid": True, "error": None}, status_code=400
         )
     return templates.TemplateResponse(
-        request, "loja_definir_senha.html", {"token": token, "invalid": False, "error": None}
+        request,
+        "loja_definir_senha.html",
+        {"token": token, "invalid": False, "error": None, "email": member.email},
     )
 
 

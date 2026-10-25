@@ -25,16 +25,7 @@
           <tr>
             <td>{{ member.name }}</td>
             <td>{{ member.email or "-" }}</td>
-            <td>
-              {% if member.password_hash %}
-                Ativo
-              {% elif member.set_password_token %}
-                Aguardando defini&ccedil;&atilde;o de senha —
-                <span class="mono">{{ base_url }}/loja/definir-senha/{{ member.set_password_token }}</span>
-              {% else %}
-                Sem acesso gerado
-              {% endif %}
-            </td>
+            <td>{% with area = "loja" %}{% include "_member_access_cell.html" %}{% endwith %}</td>
           </tr>
         {% endfor %}
         </tbody>

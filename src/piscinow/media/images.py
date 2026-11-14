@@ -5,12 +5,14 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_SIDE_PIXELS = 12000
+# About a 40-megapixel photo. Decoding costs several bytes per pixel, so this bounds memory per upload.
+MAX_PIXELS = 40_000_000
 FULL_SIDE = 1600
 THUMB_SIDE = 480
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 
-# A decoded image this large is refused by Pillow itself (decompression-bomb guard).
-Image.MAX_IMAGE_PIXELS = 40_000_000
+# Second line of defence only: Pillow raises at twice this value. MAX_PIXELS is the real limit.
+Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 
 class ImageError(ValueError):
@@ -47,8 +49,13 @@ def process_image(raw: bytes) -> ProcessedImage:
         image = Image.open(io.BytesIO(raw))
         if image.format not in ALLOWED_FORMATS:
             raise ImageError("Envie uma foto em JPG, PNG ou WebP.")
-        if max(image.size) > MAX_SIDE_PIXELS:
+        # Checked from the header, before any pixel is decoded. Pillow's own guard only raises at
+        # twice its limit, so the count is enforced here.
+        if max(image.size) > MAX_SIDE_PIXELS or image.width * image.height > MAX_PIXELS:
             raise ImageError("A foto é grande demais. Envie uma versão menor.")
+        if image.format == "JPEG":
+            # Lets the decoder shrink a large JPEG while reading it, instead of holding it all in memory.
+            image.draft("RGB", (FULL_SIDE * 2, FULL_SIDE * 2))
         image.load()
     except ImageError:
         raise

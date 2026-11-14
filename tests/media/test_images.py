@@ -95,3 +95,20 @@ def test_an_absurdly_large_canvas_is_refused():
 def test_a_truncated_file_is_refused_cleanly():
     with pytest.raises(ImageError):
         process_image(_image_bytes((800, 600))[:200])
+
+
+def test_a_photo_over_the_pixel_limit_is_refused_from_its_header_before_decoding():
+    # 42 megapixels in a 1-bit PNG: a tiny file that would be large once decoded.
+    buffer = io.BytesIO()
+    Image.new("1", (7000, 6000)).save(buffer, "PNG")
+
+    with pytest.raises(ImageError) as raised:
+        process_image(buffer.getvalue())
+
+    assert "grande demais" in str(raised.value)
+
+
+def test_a_large_phone_photo_under_the_limit_still_works():
+    result = process_image(_image_bytes((6000, 4000)))  # 24 megapixels
+
+    assert _open(result.full).size == (1600, 1067)

@@ -39,6 +39,7 @@ PAGES = {
     "admin_lojas": ("admin_lojas.html", "admin", "/admin/lojas"),
     "admin_pagamentos": ("admin_pagamentos.html", "admin", "/admin/pagamentos"),
     "loja_produtos": ("loja_produtos.html", "loja", "/loja/produtos"),
+    "loja_produto_editar": ("loja_produto_editar.html", "loja", "/loja/produtos"),
     "admin_oportunidades": ("admin_oportunidades.html", "admin", "/admin/oportunidades"),
     "admin_oportunidade_detalhe": ("admin_oportunidade_detalhe.html", "admin", "/admin/oportunidades"),
     "loja_oportunidades": ("loja_oportunidades.html", "loja", "/loja/oportunidades"),
@@ -105,6 +106,17 @@ def _example_context(name: str) -> dict:
                 NS(id=uid(41), name="Piscina de fibra 7 x 3", category="fibra", price=Decimal("18000.00"), active=True),
                 NS(id=uid(42), name="Kit de filtragem", category="filtragem", price=Decimal("3500.00"), active=True),
                 NS(id=uid(43), name="Capa térmica", category="acessórios", price=Decimal("900.00"), active=False),
+            ],
+        }
+    if name == "loja_produto_editar":
+        return {
+            "error": None, "photo_error": None, "photo_notice": "enviada", "photo_limit": 5, "can_add_photo": True, "media_enabled": True,
+            "product": NS(id=uid(41), name="Piscina de fibra 7 x 3", category="fibra", price=Decimal("18000.00"), size_label="7 x 3 m",
+                          description="Casco em fibra com borda atérmica.", kind=NS(value="piscina")),
+            "photos": [
+                {"id": uid(201), "thumb": "/midia/produtos/demo/piscina1.jpg", "cover": True},
+                {"id": uid(202), "thumb": "/midia/produtos/demo/piscina2.jpg", "cover": False},
+                {"id": uid(203), "thumb": "/midia/produtos/demo/piscina3.jpg", "cover": False},
             ],
         }
     if name == "comprador_pagamento":
@@ -360,10 +372,12 @@ def _example_context(name: str) -> dict:
         logged = name.endswith("comprador")
         return {
             "items": [
-                {"product": NS(id=uid(51), name="Piscina de fibra 7 x 3", category="fibra", price=Decimal("18000.00")),
-                 "loja": NS(name="Studio Fibra Sul", region="Valinhos")},
-                {"product": NS(id=uid(52), name="Kit de filtragem", category="filtragem", price=Decimal("3500.00")),
-                 "loja": NS(name="Piscinas Campinas", region="Campinas")},
+                {"product": NS(id=uid(51), name="Piscina de fibra 7 x 3", category="fibra", price=Decimal("18000.00"), size_label="7 x 3 m"),
+                 "loja": NS(name="Studio Fibra Sul", region="Valinhos"), "cover": "/midia/produtos/demo/piscina1.jpg"},
+                {"product": NS(id=uid(53), name="Piscina de vinil 8 x 4", category="vinil", price=Decimal("26500.00"), size_label="8 x 4 m"),
+                 "loja": NS(name="Vinil & Cia", region="Vinhedo"), "cover": "/midia/produtos/demo/piscina2.jpg"},
+                {"product": NS(id=uid(52), name="Kit de filtragem", category="filtragem", price=Decimal("3500.00"), size_label=None),
+                 "loja": NS(name="Piscinas Campinas", region="Campinas"), "cover": None},
             ],
             "kind": "", "category": "", "regiao": "",
             "comprador": NS(name="Marina Duarte") if logged else None,

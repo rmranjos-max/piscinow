@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from piscinow.agent.llm_provider import LLMProvider
 from piscinow.agent.product_extractor import extract_product_fields
+from piscinow.web.photo_context import photo_context
 from piscinow.loja_auth import login as do_login, logout as do_logout, require_loja
 from piscinow.models.member import Member, MemberStatus, ProfileType
 from piscinow.models.product import Product, ProductKind
@@ -219,7 +220,9 @@ async def editar_produto_form(
 ):
     product = _get_owned_product(db, product_id, loja.id)
     templates = request.app.state.templates
-    return templates.TemplateResponse(request, "loja_produto_editar.html", {"product": product, "error": None})
+    return templates.TemplateResponse(
+        request, "loja_produto_editar.html", {"product": product, "error": None, **photo_context(request, db, product)}
+    )
 
 
 @router.post("/produtos/{product_id}/editar")
@@ -242,7 +245,8 @@ async def editar_produto_submit(
 
     if error:
         return templates.TemplateResponse(
-            request, "loja_produto_editar.html", {"product": product, "error": error}, status_code=400
+            request, "loja_produto_editar.html",
+            {"product": product, "error": error, **photo_context(request, db, product)}, status_code=400
         )
 
     product.kind = ProductKind(kind)

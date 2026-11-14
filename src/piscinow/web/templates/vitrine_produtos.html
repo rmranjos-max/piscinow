@@ -28,28 +28,29 @@
 </form>
 
 {% if items %}
-<div class="tablewrap"><table class="admin-table">
-  <thead><tr><th>Nome</th><th>Categoria</th><th>Loja</th><th>Regi&atilde;o</th>{% if comprador %}<th>Pre&ccedil;o</th><th>A&ccedil;&atilde;o</th>{% endif %}</tr></thead>
-  <tbody>
+<ul class="product-grid">
   {% for item in items %}
-    <tr>
-      <td>{{ item.product.name }}</td>
-      <td>{{ item.product.category }}</td>
-      <td>{{ item.loja.name }}</td>
-      <td>{{ item.loja.region or "-" }}</td>
+  <li class="product-card">
+    {% if item.cover %}
+    <img class="product-photo" src="{{ item.cover }}" alt="Foto de {{ item.product.name }}" loading="lazy" width="480" height="360">
+    {% else %}
+    <div class="product-photo placeholder" role="img" aria-label="Produto ainda sem foto">Sem foto</div>
+    {% endif %}
+    <div class="product-body">
+      <h2>{{ item.product.name }}</h2>
+      <p class="muted">{{ item.product.category }}{% if item.product.size_label %} · {{ item.product.size_label }}{% endif %}</p>
+      <p class="muted small">{{ item.loja.name }}{% if item.loja.region %} · {{ item.loja.region }}{% endif %}</p>
       {% if comprador %}
-      <td>R$ {{ item.product.price | brl }}</td>
-      <td>
-        <form method="post" action="/comprador/projeto/produto">
-          <input type="hidden" name="product_id" value="{{ item.product.id }}">
-          <button class="mini-btn" type="submit">Escolher</button>
-        </form>
-      </td>
+      <p class="product-price">R$ {{ item.product.price | brl }}</p>
+      <form method="post" action="/comprador/projeto/produto">
+        <input type="hidden" name="product_id" value="{{ item.product.id }}">
+        <button class="btn" type="submit">Escolher</button>
+      </form>
       {% endif %}
-    </tr>
+    </div>
+  </li>
   {% endfor %}
-  </tbody>
-</table></div>
+</ul>
 {% else %}
 <p class="empty-note">Nenhum produto encontrado.</p>
 {% endif %}

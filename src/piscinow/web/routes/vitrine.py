@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from piscinow.comprador_auth import COMPRADOR_SESSION_KEY
 from piscinow.models.member import Member, MemberStatus, ProfileType
+from piscinow.media.photos import cover_urls
 from piscinow.models.product import Product, ProductKind
 from piscinow.models.service import Service, ServiceKind
 from piscinow.web.deps import get_db
@@ -48,7 +49,8 @@ async def vitrine_produtos(
     if regiao:
         query = query.where(Member.region.ilike(f"%{regiao}%"))
     rows = db.execute(query.order_by(Product.created_at.desc())).all()
-    items = [{"product": row[0], "loja": row[1]} for row in rows]
+    covers = cover_urls(db, request.app.state.media_storage, [row[0].id for row in rows])
+    items = [{"product": row[0], "loja": row[1], "cover": covers.get(row[0].id)} for row in rows]
     return templates.TemplateResponse(
         request,
         "vitrine_produtos.html",

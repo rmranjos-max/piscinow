@@ -29,6 +29,14 @@ services:
       PISCINOW_OPENAI_API_KEY: ${PISCINOW_OPENAI_API_KEY:-}
       PISCINOW_SESSION_SECRET: ${PISCINOW_SESSION_SECRET:?session secret required}
       PISCINOW_PUBLIC_BASE_URL: ${PISCINOW_PUBLIC_BASE_URL:-https://localhost}
+      # Fotos do catalogo: sem bucket configurado, o envio de fotos fica desligado em producao.
+      PISCINOW_MEDIA_STORAGE: ${PISCINOW_MEDIA_STORAGE:-local}
+      PISCINOW_MEDIA_PUBLIC_BASE_URL: ${PISCINOW_MEDIA_PUBLIC_BASE_URL:-}
+      PISCINOW_S3_ENDPOINT_URL: ${PISCINOW_S3_ENDPOINT_URL:-}
+      PISCINOW_S3_BUCKET: ${PISCINOW_S3_BUCKET:-}
+      PISCINOW_S3_ACCESS_KEY_ID: ${PISCINOW_S3_ACCESS_KEY_ID:-}
+      PISCINOW_S3_SECRET_ACCESS_KEY: ${PISCINOW_S3_SECRET_ACCESS_KEY:-}
+      PISCINOW_S3_REGION: ${PISCINOW_S3_REGION:-auto}
     # Sem "ports": so o proxy alcanca o app, o que torna confiavel o X-Forwarded-For.
     expose:
       - "8000"

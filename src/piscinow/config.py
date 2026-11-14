@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     chat_rate_limit_per_minute: int = 20
     public_base_url: str = "http://localhost:8000"
 
+    # Catalog photos. "local" keeps files on disk (development); "s3" is any S3-compatible bucket.
+    media_storage: Literal["local", "s3"] = "local"
+    media_local_dir: str = "var/media"
+    media_public_base_url: str | None = None
+    s3_endpoint_url: str | None = None
+    s3_bucket: str | None = None
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: str | None = None
+    s3_region: str = "auto"
+
 
 def get_settings() -> Settings:
     return Settings()

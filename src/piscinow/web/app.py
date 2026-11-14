@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.sessions import SessionMiddleware
 
 from piscinow.agent.provider_factory import build_llm_provider
+from piscinow.media.storage import LocalMediaStorage, build_media_storage
 from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
@@ -31,7 +32,9 @@ from piscinow.web.routes import (
     comprador_projeto,
     galeria,
     health,
+    midia,
     loja,
+    loja_fotos,
     loja_oportunidades,
     pages,
     prestador,
@@ -115,9 +118,25 @@ def create_app() -> FastAPI:
         )
     elif payment_provider.is_simulation:
         logger.warning("Pagamentos em modo de simulacao: nenhuma cobranca ou repasse real.")
+    app.state.media_storage = build_media_storage(
+        kind=settings.media_storage, local_dir=settings.media_local_dir, s3_endpoint_url=settings.s3_endpoint_url,
+        s3_bucket=settings.s3_bucket, s3_access_key_id=settings.s3_access_key_id,
+        s3_secret_access_key=settings.s3_secret_access_key, s3_region=settings.s3_region,
+        public_base_url=settings.media_public_base_url,
+    )
+    # Photos on the server's own disk are a development convenience: they are not in the backup
+    # and vanish with the container. In production uploads stay off until a bucket is configured.
+    local_media = isinstance(app.state.media_storage, LocalMediaStorage)
+    app.state.media_enabled = not (local_media and is_production)
+    if not app.state.media_enabled:
+        logger.warning(
+            "Envio de fotos desligado em producao: PISCINOW_MEDIA_STORAGE esta como local. "
+            "Configure um bucket (PISCINOW_MEDIA_STORAGE=s3) para habilitar."
+        )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.include_router(health.router)
+    app.include_router(midia.router)
     if not is_production:
         app.include_router(galeria.router)
     app.include_router(pages.router)
@@ -129,6 +148,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_visao.router)
     app.include_router(prestador_instalacoes.router)
     app.include_router(loja.router)
+    app.include_router(loja_fotos.router)
     app.include_router(prestador.router)
     app.include_router(loja_oportunidades.router)
     app.include_router(comprador.router)

@@ -34,5 +34,48 @@
         </div>
         <button class="btn accent" type="submit">Salvar altera&ccedil;&otilde;es</button>
       </form>
+
+      <section class="card photos" id="fotos" aria-labelledby="fotos-titulo">
+        <h2 id="fotos-titulo">Fotos do produto</h2>
+        <p class="muted small">O comprador vê estas fotos na vitrine e nas propostas em que este produto aparece. A primeira é a capa. Até {{ photo_limit }} fotos, em JPG, PNG ou WebP, com no máximo 8 MB cada.</p>
+
+        {% if photo_notice == "enviada" %}<p class="status-ok" role="status">Foto enviada.</p>
+        {% elif photo_notice == "removida" %}<p class="status-ok" role="status">Foto removida.</p>
+        {% elif photo_notice == "capa" %}<p class="status-ok" role="status">Capa atualizada.</p>{% endif %}
+
+        {% if photos %}
+        <ul class="photo-grid">
+          {% for photo in photos %}
+          <li>
+            <img src="{{ photo.thumb }}" alt="Foto {{ loop.index }} de {{ product.name }}" loading="lazy" width="480" height="360">
+            <div class="row-actions">
+              {% if photo.cover %}<span class="badge green">Capa</span>
+              {% else %}
+              <form method="post" action="/loja/produtos/{{ product.id }}/fotos/{{ photo.id }}/capa"><button class="mini-btn" type="submit">Usar como capa</button></form>
+              {% endif %}
+              <form method="post" action="/loja/produtos/{{ product.id }}/fotos/{{ photo.id }}/remover"><button class="mini-btn" type="submit">Remover</button></form>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-note">Este produto ainda não tem foto. Produtos com foto ajudam o comprador a decidir.</p>
+        {% endif %}
+
+        {% if not media_enabled %}
+        <p class="notice" role="note">O envio de fotos está indisponível no momento.</p>
+        {% elif can_add_photo %}
+        <form method="post" action="/loja/produtos/{{ product.id }}/fotos" enctype="multipart/form-data" class="photo-form">
+          <div class="field">
+            <label for="foto">Adicionar foto</label>
+            <input id="foto" type="file" name="foto" accept="image/jpeg,image/png,image/webp" required{% if photo_error %} aria-describedby="foto-erro"{% endif %}>
+            {% if photo_error %}<p class="error" id="foto-erro" role="alert">{{ photo_error }}</p>{% endif %}
+          </div>
+          <button class="btn" type="submit">Enviar foto</button>
+        </form>
+        {% else %}
+        <p class="muted small">Limite de {{ photo_limit }} fotos atingido. Remova uma para enviar outra.</p>
+        {% endif %}
+      </section>
 </div>
 {% endblock %}

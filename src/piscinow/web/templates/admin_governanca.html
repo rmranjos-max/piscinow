@@ -1,0 +1,38 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import empty %}
+{% block title %}Governança{% endblock %}
+{% block content %}
+<p class="eyebrow">Administração</p>
+<h1>Governança</h1>
+<p class="sub">Trilha de auditoria somente de leitura: quem fez o quê e quando em todas as oportunidades. Revisões do matching, liberações de contato, perdas e atribuições ficam aqui.</p>
+
+<nav class="filter-tabs" aria-label="Filtrar por tipo de evento">
+  {% for key, label in groups.items() %}
+  <a href="/admin/governanca?tipo={{ key }}"{% if key == group %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if events %}
+<div class="tablewrap"><table class="admin-table">
+  <thead><tr><th>Quando</th><th>Oportunidade</th><th>Evento</th><th>Quem</th><th>Detalhe</th></tr></thead>
+  <tbody>
+  {% for row in events %}
+    <tr>
+      <td>{{ row.event.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+      <td><a href="/admin/oportunidades/{{ row.qualification_id }}">{{ row.code }}</a></td>
+      <td>{{ row.kind_label }}</td>
+      <td>{{ row.event.actor }}</td>
+      <td>{{ row.event.note or "" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<nav class="pager row-actions" aria-label="Páginas">
+  {% if page > 1 %}<a class="mini-btn" href="/admin/governanca?tipo={{ group }}&amp;pagina={{ page - 1 }}">Anterior</a>{% endif %}
+  <span class="muted small">Página {{ page }} de {{ pages }} · {{ total }} evento{{ "" if total == 1 else "s" }}</span>
+  {% if page < pages %}<a class="mini-btn" href="/admin/governanca?tipo={{ group }}&amp;pagina={{ page + 1 }}">Próxima</a>{% endif %}
+</nav>
+{% else %}
+{{ empty("Nenhum evento registrado neste filtro.") }}
+{% endif %}
+{% endblock %}

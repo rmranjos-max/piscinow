@@ -1,0 +1,56 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, stat, empty %}
+{% block title %}Visão geral{% endblock %}
+{% block content %}
+<p class="eyebrow">Administração</p>
+<h1>Visão geral</h1>
+<p class="sub">Números reais da operação, lidos agora do banco. Onde não há dados, a tela diz que não há.</p>
+
+<div class="grid cols3">
+  {{ stat(qualifications_total, "Conversas com o consultor", consent_granted ~ " autorizaram o compartilhamento") }}
+  {{ stat(deals_total, "Oportunidades", "Todas as que já foram abertas") }}
+  {{ stat(avg_to_accept, "Tempo até o aceite", "Da criação da oportunidade ao aceite da proposta") }}
+</div>
+
+<section class="card" aria-labelledby="funil">
+  <h2 id="funil">Funil de oportunidades</h2>
+  {% if deals_total %}
+  <ol class="funnel">
+    {% for row in funnel %}
+    <li data-state="{{ row.key }}">
+      <span class="funnel-label">{{ row.label }}</span>
+      <progress class="funnel-bar" value="{{ row.share }}" max="100" aria-hidden="true">{{ row.share }}%</progress>
+      <b>{{ row.count }}</b>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  {{ empty("Ainda não há oportunidades. Elas nascem quando um comprador conclui o briefing e autoriza o compartilhamento.") }}
+  {% endif %}
+</section>
+
+<div class="grid cols2">
+  <section class="card" aria-labelledby="atencao">
+    <h2 id="atencao">Precisa de atenção</h2>
+    <ul class="plain-list">
+      <li><span>Pedidos de atenção abertos</span><b>{{ attention_open }}</b></li>
+      <li><span>Parceiros na fila de admissão</span><b>{{ waitlist }}</b></li>
+      <li><span>Propostas aceitas sem instalador</span><b>{{ accepted_without_installer }}</b></li>
+      <li><span>Instaladores aguardando resposta</span><b>{{ installer_pending }}</b></li>
+    </ul>
+    <div class="row-actions">
+      <a class="mini-btn" href="/admin/oportunidades">Oportunidades</a>
+      <a class="mini-btn" href="/admin/fila">Fila de admissão</a>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="perdas">
+    <h2 id="perdas">Motivos de perda</h2>
+    {% if loss_reasons %}
+    <ul class="plain-list">{% for reason, count in loss_reasons %}<li><span>{{ reason }}</span><b>{{ count }}</b></li>{% endfor %}</ul>
+    {% else %}
+    {{ empty("Nenhuma oportunidade perdida até agora.") }}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

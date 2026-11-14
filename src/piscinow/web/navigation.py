@@ -28,6 +28,7 @@ AREAS: dict[str, Area] = {
         home="/admin/fila",
         logout="/admin/logout",
         items=(
+            NavItem("Visão geral", "/admin", "home", exact=True),
             NavItem("Fila de admissão", "/admin/fila", "inbox"),
             NavItem("Oportunidades", "/admin/oportunidades", "target"),
             NavItem("Lojas", "/admin/lojas", "store"),
@@ -35,6 +36,7 @@ AREAS: dict[str, Area] = {
             NavItem("Compradores", "/admin/compradores", "users"),
             NavItem("Pagamentos", "/admin/pagamentos", "wallet"),
             NavItem("Ensinar o concierge", "/admin/correcoes", "book"),
+            NavItem("Governança", "/admin/governanca", "shield"),
         ),
     ),
     "loja": Area(

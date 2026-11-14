@@ -6,6 +6,7 @@ from types import SimpleNamespace as NS
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from piscinow.overview.stats import funnel
 from piscinow.qualification.service import known_fields
 from piscinow.web.journey import comprador_journey, consultor_card, stage_overview
 from piscinow.web.navigation import AREAS
@@ -44,6 +45,8 @@ PAGES = {
     "admin_atendimento": ("admin_atendimento.html", "admin", "/admin/lojas"),
     "comprador_propostas": ("comprador_propostas.html", "comprador", "/comprador/propostas"),
     "prestador_instalacoes": ("prestador_instalacoes.html", "prestador", "/prestador/instalacoes"),
+    "admin_visao_geral": ("admin_visao_geral.html", "admin", "/admin"),
+    "admin_governanca": ("admin_governanca.html", "admin", "/admin/governanca"),
     "admin_instalador_atendimento": ("admin_instalador_atendimento.html", "admin", "/admin/prestadores"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
@@ -181,6 +184,31 @@ def _example_context(name: str) -> dict:
                      ]),
                 item(3, "Cliente #77D2", [("Localização", "Vinhedo"), ("Tipo de piscina", "Vinil"), ("Prazo desejado", "Sem prazo definido")],
                      "recusada", "Você recusou"),
+            ],
+        }
+    if name == "admin_visao_geral":
+        return {
+            "funnel": funnel({"qualified": 6, "matched": 4, "partner_review": 3, "proposal_sent": 2, "negotiating": 1,
+                              "accepted": 1, "lost": 2, "cancelled": 1}),
+            "deals_total": 20, "qualifications_total": 31, "consent_granted": 20, "avg_to_accept": "9 dias e 4 h",
+            "attention_open": 3, "waitlist": 2, "accepted_without_installer": 1, "installer_pending": 1,
+            "loss_reasons": [("Sem retorno do comprador", 1), ("Comprou fora da plataforma", 1)],
+        }
+    if name == "admin_governanca":
+        event = lambda n, kind, label, actor, note, code="OP-0007": {  # noqa: E731
+            "event": NS(created_at=now - timedelta(hours=n * 5), actor=actor, note=note), "code": code,
+            "qualification_id": uid(67), "kind_label": label,
+        }
+        return {
+            "group": "todas", "page": 1, "pages": 3, "total": 112,
+            "groups": {"todas": "Todas", "matching": "Matching", "propostas": "Propostas", "contato": "Contato liberado",
+                       "viabilidade": "Viabilidade", "instalacao": "Instalação", "estado": "Estados e perdas"},
+            "events": [
+                event(1, "installer_assigned", "Instalador atribuído", "admin:equipe@piscinow.com.br", "Instalações Sul: Atende Valinhos"),
+                event(2, "contact_released", "Contato liberado", "sistema", "Contato liberado para Studio Fibra Sul"),
+                event(2, "proposal_accepted", "Proposta aceita", "comprador:3f2a…", "Studio Fibra Sul v2 (R$ 19.500,00)"),
+                event(6, "feasibility", "Viabilidade", "admin:equipe@piscinow.com.br", "Viabilidade: conditionally_approved"),
+                event(9, "matching_override", "Revisão do matching", "admin:equipe@piscinow.com.br", "Piscinas Campinas: incluida (Atende por parceria)", "OP-0006"),
             ],
         }
     if name == "admin_instalador_atendimento":

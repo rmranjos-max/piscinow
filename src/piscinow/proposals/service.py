@@ -4,9 +4,13 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import uuid
+
 from piscinow.matching.inbox import decision_is_visible
+from piscinow.media.photos import photos_of
 from piscinow.models.matching import MatchingDecision, PartnerResponse
 from piscinow.models.member import Member
+from piscinow.models.product import Product
 from piscinow.models.proposal import (
     DealMessage, FeasibilityCheck, FeasibilityStatus, MessageAuthor, Proposal, ProposalItem, ProposalStatus,
 )
@@ -37,6 +41,34 @@ def _store(db: Session, decision: MatchingDecision) -> Member:
     return db.get(Member, decision.partner_member_id)
 
 
+def _resolve_items(db: Session, store_id, items: list[tuple]) -> list[dict]:
+    """Fill each item from its catalog product, when it has one, and take the product's cover photo.
+
+    An item is (description, amount) or (description, amount, product id). The product must be an
+    active product of this very store.
+    """
+    resolved = []
+    for index, item in enumerate(items, start=1):
+        description, amount = item[0], item[1]
+        raw_product = item[2] if len(item) > 2 else None
+        row = {"description": description or "", "amount": amount, "product_id": None, "photo_key": None, "photo_thumb_key": None}
+        if raw_product:
+            try:
+                product = db.get(Product, uuid.UUID(str(raw_product)))
+            except ValueError:
+                product = None
+            if product is None or product.member_id != store_id or not product.active:
+                raise ProposalError(f"O produto escolhido no item {index} não está no seu catálogo.")
+            row["product_id"] = product.id
+            row["description"] = row["description"].strip() or product.name
+            row["amount"] = amount if amount is not None else product.price
+            photos = photos_of(db, product.id)
+            if photos:
+                row["photo_key"], row["photo_thumb_key"] = photos[0].key, photos[0].thumb_key
+        resolved.append(row)
+    return resolved
+
+
 def submit_proposal(
     db: Session, decision: MatchingDecision, *, items: list[tuple[str, Decimal]], scope: str,
     lead_time_days: int, valid_until: date, exclusions: str = "", today: date | None = None,
@@ -47,6 +79,8 @@ def submit_proposal(
         raise ProposalError("Esta oportunidade não está disponível para enviar proposta.")
     if deal.status not in NEGOTIABLE:
         raise ProposalError("Esta oportunidade não aceita mais propostas.")
+    resolved = _resolve_items(db, decision.partner_member_id, items)
+    items = [(row["description"], row["amount"]) for row in resolved]
     errors = validate_proposal(
         items=items, scope=scope, lead_time_days=lead_time_days, valid_until=valid_until, today=today
     )
@@ -70,8 +104,11 @@ def submit_proposal(
         valid_until=valid_until, exclusions=(exclusions or "").strip() or None, created_by=f"loja:{store.id}",
     )
     proposal.items = [
-        ProposalItem(position=position, description=description.strip(), amount=amount)
-        for position, (description, amount) in enumerate(items, start=1)
+        ProposalItem(
+            position=position, description=row["description"].strip(), amount=row["amount"],
+            product_id=row["product_id"], photo_key=row["photo_key"], photo_thumb_key=row["photo_thumb_key"],
+        )
+        for position, row in enumerate(resolved, start=1)
     ]
     db.add(proposal)
     db.flush()
@@ -212,3 +249,16 @@ def save_feasibility(
     db.flush()
     record_event(db, deal, "feasibility", actor=actor, note=f"Viabilidade: {status}")
     return check
+
+
+def item_rows(storage, proposal: Proposal) -> list[dict]:
+    """A proposal's items for display, each with the photo it was sent with (when it had one)."""
+    return [
+        {
+            "description": item.description,
+            "amount": brl(item.amount),
+            "photo": storage.url(item.photo_thumb_key) if item.photo_thumb_key else None,
+            "photo_full": storage.url(item.photo_key) if item.photo_key else None,
+        }
+        for item in proposal.items
+    ]

@@ -13,7 +13,8 @@ from piscinow.models.proposal import DealMessage, MessageAuthor, Proposal
 from piscinow.models.qualification import Deal
 from piscinow.proposals.forms import parse_proposal_form
 from piscinow.proposals.rules import is_expired
-from piscinow.proposals.service import NEGOTIABLE, ProposalError, brl, post_message, submit_proposal
+from piscinow.models.product import Product
+from piscinow.proposals.service import NEGOTIABLE, ProposalError, brl, item_rows, post_message, submit_proposal
 from piscinow.web.deps import get_db
 
 router = APIRouter(prefix="/loja/oportunidades")
@@ -26,7 +27,7 @@ PROPOSAL_LABELS = {
 FORM_ROWS = 6
 
 
-def _enrich(db: Session, item: dict, today: date) -> dict:
+def _enrich(db: Session, item: dict, today: date, storage, catalog: list) -> dict:
     decision = item["decision"]
     deal = db.get(Deal, item["deal_id"])
     proposals = list(db.scalars(
@@ -43,11 +44,12 @@ def _enrich(db: Session, item: dict, today: date) -> dict:
         "can_propose": decision.response == PartnerResponse.EM_ANALISE and deal.status in NEGOTIABLE,
         "proposals": [
             {"p": p, "label": PROPOSAL_LABELS[p.status.value], "expired": p.status.value == "enviada" and is_expired(p.valid_until, today),
-             "total": brl(p.total), "items": [(i.description, brl(i.amount)) for i in p.items]}
+             "total": brl(p.total), "items": item_rows(storage, p)}
             for p in proposals
         ],
         "messages": [{"mine": m.author == MessageAuthor.LOJA, "text": m.text, "revision": m.is_revision_request, "at": m.created_at} for m in messages],
         "rows": range(FORM_ROWS),
+        "catalog": catalog,
         "errors": [],
         "form": {},
     }
@@ -58,7 +60,11 @@ def _render(
     failed_id: str | None = None, errors: list[str] | None = None, form: dict | None = None,
 ):
     today = date.today()
-    items = [_enrich(db, item, today) for item in inbox_for_partner(db, loja.id)]
+    catalog = list(db.scalars(
+        select(Product).where(Product.member_id == loja.id, Product.active.is_(True)).order_by(Product.name)
+    ))
+    storage = request.app.state.media_storage
+    items = [_enrich(db, item, today, storage, catalog) for item in inbox_for_partner(db, loja.id)]
     for item in items:
         if failed_id and str(item["decision"].id) == failed_id:
             item["errors"], item["form"] = errors or [], form or {}
@@ -104,6 +110,7 @@ async def enviar_proposta(
     decision_id: str,
     item_desc: list[str] = Form([]),
     item_amount: list[str] = Form([]),
+    item_product: list[str] = Form([]),
     scope: str = Form(""),
     lead_time_days: str = Form(""),
     valid_until: str = Form(""),
@@ -112,7 +119,9 @@ async def enviar_proposta(
     loja: Member = Depends(require_loja),
 ):
     decision = _decision_or_404(db, decision_id, loja)
-    values, errors = parse_proposal_form(item_desc, item_amount, scope, lead_time_days, valid_until, exclusions)
+    values, errors = parse_proposal_form(
+        item_desc, item_amount, scope, lead_time_days, valid_until, exclusions, item_product
+    )
     if values is not None:
         try:
             submit_proposal(db, decision, **values)
@@ -120,7 +129,9 @@ async def enviar_proposta(
             errors = exc.errors
     if errors:
         form = {
-            "rows": list(zip(item_desc + [""] * FORM_ROWS, item_amount + [""] * FORM_ROWS))[:FORM_ROWS],
+            "rows": list(zip(
+                item_desc + [""] * FORM_ROWS, item_amount + [""] * FORM_ROWS, item_product + [""] * FORM_ROWS
+            ))[:FORM_ROWS],
             "scope": scope, "lead_time_days": lead_time_days, "valid_until": valid_until, "exclusions": exclusions,
         }
         return _render(request, db, loja, status_code=400, failed_id=decision_id, errors=errors, form=form)

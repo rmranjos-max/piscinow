@@ -16,7 +16,7 @@ def test_filled_rows_become_items_and_blank_rows_are_ignored():
     values, errors = parse()
 
     assert errors == []
-    assert values["items"] == [("Piscina", Decimal("18000.00")), ("Instalação", Decimal("3000"))]
+    assert values["items"] == [("Piscina", Decimal("18000.00"), None), ("Instalação", Decimal("3000"), None)]
     assert (values["lead_time_days"], values["valid_until"]) == (45, date(2026, 12, 1))
 
 
@@ -40,3 +40,21 @@ def test_mismatched_list_lengths_do_not_crash():
     values, errors = parse(item_desc=["Piscina", "Extra"], item_amount=["100"])
 
     assert values is None and len(errors) == 1
+
+
+def test_an_item_can_point_to_a_catalog_product_and_leave_description_and_amount_to_it():
+    values, errors = parse(item_desc=["", "Instalação"], item_amount=["", "3000"], item_product=["abc-123", ""])
+
+    assert errors == []
+    assert values["items"] == [("", None, "abc-123"), ("Instalação", Decimal("3000"), None)]
+
+
+def test_a_typed_amount_wins_over_the_catalog_price_but_must_still_be_valid():
+    assert parse(item_desc=[""], item_amount=["17500,00"], item_product=["abc"])[0]["items"] == [("", Decimal("17500.00"), "abc")]
+    assert parse(item_desc=[""], item_amount=["17.500,00"], item_product=["abc"])[1]
+
+
+def test_a_row_with_nothing_but_an_empty_product_choice_is_ignored():
+    values, errors = parse(item_desc=["Piscina", ""], item_amount=["100", ""], item_product=["", ""])
+
+    assert errors == [] and len(values["items"]) == 1

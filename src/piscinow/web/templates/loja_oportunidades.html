@@ -51,7 +51,14 @@
         {{ badge("Vencida" if entry.expired else entry.label, "green" if entry.p.status.value == "aceita" else ("amber" if entry.expired or entry.p.status.value in ("recusada", "encerrada") else "")) }}
       </div>
       <p class="muted small">Prazo {{ entry.p.lead_time_days }} dias · válida até {{ entry.p.valid_until.strftime("%d/%m/%Y") }}</p>
-      <ul class="plain-list">{% for description, amount in entry["items"] %}<li><span>{{ description }}</span><b>{{ amount }}</b></li>{% endfor %}</ul>
+      <ul class="proposal-items">
+        {% for row in entry["items"] %}
+        <li>
+          {% if row.photo %}<a href="{{ row.photo_full }}" class="item-photo"><img src="{{ row.photo }}" alt="Foto de {{ row.description }}" loading="lazy" width="480" height="360"></a>{% endif %}
+          <span class="item-text">{{ row.description }}</span><b>{{ row.amount }}</b>
+        </li>
+        {% endfor %}
+      </ul>
       <p class="small"><b>Escopo:</b> {{ entry.p.scope }}</p>
       {% if entry.p.exclusions %}<p class="small"><b>Não inclui:</b> {{ entry.p.exclusions }}</p>{% endif %}
       {% if entry.p.decision_reason %}<p class="small"><b>Motivo da recusa:</b> {{ entry.p.decision_reason }}</p>{% endif %}
@@ -64,9 +71,16 @@
       <summary><b>Enviar proposta</b>{% if item.proposals %} (nova versão){% endif %}</summary>
       {% if item.errors %}<ul class="error" role="alert">{% for e in item.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
       <form method="post" action="/loja/oportunidades/{{ item.decision.id }}/proposta" class="proposal-form">
-        <p class="muted small">Cada envio é uma versão nova e não pode ser editado depois. O total é a soma dos itens.</p>
+        <p class="muted small">Cada envio é uma versão nova e não pode ser editado depois. O total é a soma dos itens.{% if item.catalog %} Ao escolher um produto do catálogo, a foto dele vai junto, e a descrição e o valor em branco são preenchidos pelo catálogo.{% endif %}</p>
         {% for i in item.rows %}
         <div class="item-row">
+          {% if item.catalog %}
+          <label class="visually-hidden" for="p-{{ item.decision.id }}-{{ i }}">Produto do catálogo para o item {{ i + 1 }}</label>
+          <select id="p-{{ item.decision.id }}-{{ i }}" name="item_product">
+            <option value="">Item {{ i + 1 }}: sem produto do catálogo</option>
+            {% for product in item.catalog %}<option value="{{ product.id }}"{% if item.form.rows and item.form.rows[i][2] == product.id|string %} selected{% endif %}>{{ product.name }}</option>{% endfor %}
+          </select>
+          {% endif %}
           <label class="visually-hidden" for="d-{{ item.decision.id }}-{{ i }}">Item {{ i + 1 }}</label>
           <input id="d-{{ item.decision.id }}-{{ i }}" name="item_desc" type="text" maxlength="300" placeholder="Item {{ i + 1 }}" value="{{ item.form.rows[i][0] if item.form.rows else '' }}">
           <label class="visually-hidden" for="a-{{ item.decision.id }}-{{ i }}">Valor do item {{ i + 1 }}</label>

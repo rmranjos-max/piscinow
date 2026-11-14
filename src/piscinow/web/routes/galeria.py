@@ -169,14 +169,17 @@ def _example_context(name: str) -> dict:
                 "p": NS(version=version, status=NS(value=status), lead_time_days=45, valid_until=now.date() + timedelta(days=12),
                         scope="Fornecimento e instalação completa, com 1 visita técnica.", exclusions="Paisagismo e cercamento",
                         decision_reason=None),
-                "label": label, "expired": expired, "total": total, "items": items,
+                "label": label, "expired": expired, "total": total,
+                "items": [{"description": i[0], "amount": i[1], "photo": i[2] if len(i) > 2 else None,
+                           "photo_full": i[2] if len(i) > 2 else None} for i in items],
             }
 
         item = lambda n, code, campos, response, label, **extra: {  # noqa: E731
             "decision": NS(id=uid(70 + n), response_reason="Agenda cheia até dezembro" if response == "recusada" else None),
             "briefing": {"codigo": code, "campos": [{"rotulo": r, "valor": v} for r, v in campos]},
             "response": response, "response_label": label, "contact": None, "can_propose": False,
-            "proposals": [], "messages": [], "rows": range(6), "errors": [], "form": {}, **extra,
+            "proposals": [], "messages": [], "rows": range(6), "errors": [], "form": {},
+            "catalog": [NS(id=uid(41), name="Piscina de fibra 7 x 3"), NS(id=uid(42), name="Kit de filtragem")], **extra,
         }
         return {
             "error": None,
@@ -187,7 +190,7 @@ def _example_context(name: str) -> dict:
                 item(2, "Cliente #09BC", [("Localização", "Campinas"), ("Tipo de piscina", "Ainda não sei"), ("Prazo desejado", "Até 6 meses")],
                      "em_analise", "Você vai analisar", can_propose=True,
                      proposals=[
-                         proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00")]),
+                         proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00", "/midia/produtos/demo/piscina1.jpg")]),
                          proposal(1, "substituida", "Substituída", "R$ 21.000,00", [("Piscina de fibra 7x3", "R$ 18.000,00"), ("Instalação", "R$ 3.000,00")]),
                      ],
                      messages=[
@@ -256,7 +259,9 @@ def _example_context(name: str) -> dict:
             "p": NS(id=uid(80 + version), version=version, status=NS(value=status), lead_time_days=45 - version * 5,
                     valid_until=now.date() + timedelta(days=12), scope="Fornecimento e instalação completa, com 1 visita técnica.",
                     exclusions="Paisagismo e cercamento", decision_reason=None),
-            "label": label, "expired": expired, "total": total, "items": items,
+            "label": label, "expired": expired, "total": total,
+                "items": [{"description": i[0], "amount": i[1], "photo": i[2] if len(i) > 2 else None,
+                           "photo_full": i[2] if len(i) > 2 else None} for i in items],
         }
         store = lambda n, name, proposals, messages: {  # noqa: E731
             "decision": NS(id=uid(90 + n)), "store": NS(name=name, id=uid(100 + n)), "proposals": proposals, "messages": messages,
@@ -268,13 +273,13 @@ def _example_context(name: str) -> dict:
             "caveats": [{"label": "Terreno", "note": "Leve declive no fundo do terreno"}],
             "stores": [
                 store(1, "Studio Fibra Sul", [
-                    proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00")]),
+                    proposal(2, "enviada", "Em aberto", "R$ 19.500,00", [("Piscina de fibra 7x3, instalada", "R$ 19.500,00", "/midia/produtos/demo/piscina1.jpg")]),
                     proposal(1, "substituida", "Substituída por versão mais nova", "R$ 21.000,00",
                              [("Piscina de fibra 7x3", "R$ 18.000,00"), ("Instalação", "R$ 3.000,00")]),
                 ], [{"mine": True, "text": "Consegue reduzir o valor se eu retirar a instalação?", "revision": True},
                     {"mine": False, "text": "Posso fazer a versão 2 com o valor fechado.", "revision": False}]),
                 store(2, "Piscinas Campinas", [
-                    proposal(1, "enviada", "Em aberto", "R$ 22.800,00", [("Piscina de fibra 7x3 completa", "R$ 22.800,00")]),
+                    proposal(1, "enviada", "Em aberto", "R$ 22.800,00", [("Piscina de fibra 7x3 completa", "R$ 22.800,00", "/midia/produtos/demo/piscina2.jpg")]),
                 ], []),
             ],
         }

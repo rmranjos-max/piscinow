@@ -82,6 +82,11 @@ class ProposalItem(Base):
     position: Mapped[int] = mapped_column(Integer)
     description: Mapped[str] = mapped_column(String(300))
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    product_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=True)
+    # Copied when the version is sent: a version is immutable, so it keeps showing the photo the
+    # buyer saw even if the store later changes the product's photos.
+    photo_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    photo_thumb_key: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
 class DealMessage(Base):

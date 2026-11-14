@@ -307,7 +307,12 @@ details.shortcut { margin-bottom: 16px; }
 .proposal { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
 .proposal.current { border-color: var(--link); background: var(--nav-active-bg); }
 .proposal-form { display: grid; gap: 6px; margin-top: 10px; }
-.item-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+.item-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.proposal-items { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
+.proposal-items li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.proposal-items .item-text { flex: 1 1 140px; min-width: 0; }
+.proposal-items .item-photo { flex: 0 0 96px; }
+.proposal-items .item-photo img { width: 96px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
 .opp-list h3 { margin: 18px 0 6px; font-size: 15px; }
 .opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; margin-top: 16px; }
 .opp-list .card { margin-bottom: 0; }

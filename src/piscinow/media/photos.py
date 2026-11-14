@@ -5,6 +5,7 @@ from piscinow.media.images import ImageError, process_image
 from piscinow.media.storage import MediaStorage, new_key
 from piscinow.models.media import ProductPhoto
 from piscinow.models.product import Product
+from piscinow.models.proposal import ProposalItem
 
 MAX_PHOTOS_PER_PRODUCT = 5
 
@@ -49,6 +50,9 @@ def remove_photo(db: Session, storage: MediaStorage, photo: ProductPhoto) -> Non
     key, thumb_key = photo.key, photo.thumb_key
     db.delete(photo)
     db.flush()
+    # A proposal version already sent keeps showing the photo it was sent with: its files stay.
+    if db.scalar(select(ProposalItem.id).where(ProposalItem.photo_key == key).limit(1)) is not None:
+        return
     # The row goes first: a file without a row is harmless, a row without a file is a broken image.
     storage.delete(key)
     storage.delete(thumb_key)

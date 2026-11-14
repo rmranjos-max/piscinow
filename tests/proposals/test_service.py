@@ -324,3 +324,82 @@ def test_no_conversation_exists_with_a_store_that_has_not_agreed_to_analyze_or_t
         with pytest.raises(ProposalError):
             post_message(db_session, decisions[store.id], author=MessageAuthor.LOJA, member=store, text="Olá?")
     assert db_session.query(DealMessage).count() == 0
+
+
+# --- items linked to catalog products, with the photo kept by the sent version
+
+def _jpeg_bytes():
+    import io as _io
+    from PIL import Image
+    buffer = _io.BytesIO()
+    Image.new("RGB", (600, 400), (20, 110, 170)).save(buffer, "JPEG")
+    return buffer.getvalue()
+
+
+def _catalog_product(db_session, loja, name="Piscina de fibra 7x3", price="18000.00", active=True):
+    from piscinow.models.product import Product, ProductKind
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name=name, price=Decimal(price), active=active)
+    db_session.add(product)
+    db_session.flush()
+    return product
+
+
+def test_an_item_linked_to_a_catalog_product_takes_its_name_price_and_cover_photo(db_session):
+    from piscinow.media.photos import add_photo
+    from piscinow.media.storage import MemoryMediaStorage
+
+    loja = _loja(db_session)
+    _, _, _, decisions = _setup(db_session, loja)
+    product = _catalog_product(db_session, loja)
+    photo = add_photo(db_session, MemoryMediaStorage(), product, _jpeg_bytes())
+
+    proposal = _send(db_session, decisions[loja.id], items=[("", None, str(product.id)), ("Instalação", Decimal("3000.00"), None)])
+
+    first, second = proposal.items
+    assert (first.description, first.amount, first.product_id) == ("Piscina de fibra 7x3", Decimal("18000.00"), product.id)
+    assert (first.photo_key, first.photo_thumb_key) == (photo.key, photo.thumb_key)
+    assert (second.product_id, second.photo_key) == (None, None)
+    assert proposal.total == Decimal("21000.00")
+
+
+def test_a_typed_description_and_amount_win_over_the_catalog(db_session):
+    loja = _loja(db_session)
+    _, _, _, decisions = _setup(db_session, loja)
+    product = _catalog_product(db_session, loja)
+
+    proposal = _send(db_session, decisions[loja.id], items=[("Piscina com borda especial", Decimal("19500.00"), str(product.id))])
+
+    [item] = proposal.items
+    assert (item.description, item.amount, item.photo_key) == ("Piscina com borda especial", Decimal("19500.00"), None)
+
+
+def test_a_product_of_another_store_an_inactive_one_or_a_bad_id_is_refused(db_session):
+    loja, other = _loja(db_session), _loja(db_session, "Outra Loja")
+    _, _, _, decisions = _setup(db_session, loja)
+    foreign = _catalog_product(db_session, other, "Produto alheio")
+    inactive = _catalog_product(db_session, loja, "Fora de linha", active=False)
+
+    for bad in (str(foreign.id), str(inactive.id), "nao-uuid"):
+        with pytest.raises(ProposalError) as raised:
+            _send(db_session, decisions[loja.id], items=[("", None, bad)])
+        assert "não está no seu catálogo" in raised.value.errors[0]
+    assert db_session.query(Proposal).count() == 0
+
+
+def test_a_sent_version_keeps_its_photo_even_after_the_store_removes_it_from_the_catalog(db_session):
+    from piscinow.media.photos import add_photo, remove_photo
+    from piscinow.media.storage import MemoryMediaStorage
+
+    storage = MemoryMediaStorage()
+    loja = _loja(db_session)
+    _, _, _, decisions = _setup(db_session, loja)
+    product = _catalog_product(db_session, loja)
+    used = add_photo(db_session, storage, product, _jpeg_bytes())
+    proposal = _send(db_session, decisions[loja.id], items=[("", None, str(product.id))])
+    unused = add_photo(db_session, storage, product, _jpeg_bytes())
+
+    remove_photo(db_session, storage, used)
+    remove_photo(db_session, storage, unused)
+
+    assert proposal.items[0].photo_key in storage.files and proposal.items[0].photo_thumb_key in storage.files
+    assert unused.key not in storage.files and unused.thumb_key not in storage.files

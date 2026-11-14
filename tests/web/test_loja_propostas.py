@@ -217,3 +217,63 @@ def test_before_the_acceptance_the_proposal_page_shows_no_buyer_contact(client, 
 
     for secret in ("Marina", "Duarte", BUYER_EMAIL, BUYER_PHONE):
         assert secret not in page
+
+
+def test_an_item_can_use_a_catalog_product_and_the_buyer_then_sees_its_photo(client, db_session):
+    import io as _io
+    from PIL import Image
+    from piscinow.media.photos import add_photo
+    from piscinow.media.storage import MemoryMediaStorage
+    from piscinow.models.product import Product, ProductKind
+
+    storage = MemoryMediaStorage()
+    client.app.state.media_storage = storage
+    loja = _loja(db_session)
+    buyer, _, decisions = _shared(db_session, loja)
+    product = Product(member_id=loja.id, kind=ProductKind.PISCINA, category="fibra", name="Piscina Fibra 7x3", price=18000)
+    db_session.add(product)
+    db_session.flush()
+    buffer = _io.BytesIO()
+    Image.new("RGB", (600, 400), (20, 110, 170)).save(buffer, "JPEG")
+    photo = add_photo(db_session, storage, product, buffer.getvalue())
+    _login(client)
+
+    assert "Piscina Fibra 7x3" in client.get("/loja/oportunidades").text  # offered in the catalog choice
+    response = client.post(
+        f"/loja/oportunidades/{decisions[loja.id].id}/proposta",
+        data=_form(item_desc=["", ""], item_amount=["", ""], item_product=[str(product.id), ""]), follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    proposal = db_session.query(Proposal).one()
+    assert proposal.items[0].product_id == product.id and proposal.total == Decimal("18000.00")
+    assert f'src="/midia/{photo.thumb_key}"' in response.text
+
+    buyer.set_password("senha-forte-123")
+    buyer.email = "comprador.foto@example.com"
+    db_session.flush()
+    client.post("/loja/logout")
+    client.post("/comprador/login", data={"email": "comprador.foto@example.com", "password": "senha-forte-123"})
+    page = client.get("/comprador/propostas").text
+    assert f'src="/midia/{photo.thumb_key}"' in page and 'alt="Foto de Piscina Fibra 7x3"' in page
+
+
+def test_a_store_cannot_put_another_stores_product_in_its_proposal(client, db_session):
+    from piscinow.models.product import Product, ProductKind
+
+    mine, other = _loja(db_session, "Minha", "minha@example.com"), _loja(db_session, "Outra", "outra@example.com")
+    _, _, decisions = _shared(db_session, mine, other)
+    foreign = Product(member_id=other.id, kind=ProductKind.PISCINA, category="fibra", name="Produto Alheio", price=1000)
+    db_session.add(foreign)
+    db_session.flush()
+    _login(client, "minha@example.com")
+
+    page = client.get("/loja/oportunidades").text
+    response = client.post(
+        f"/loja/oportunidades/{decisions[mine.id].id}/proposta",
+        data=_form(item_desc=[""], item_amount=[""], item_product=[str(foreign.id)]),
+    )
+
+    assert "Produto Alheio" not in page
+    assert response.status_code == 400 and "não está no seu catálogo" in response.text
+    assert db_session.query(Proposal).count() == 0

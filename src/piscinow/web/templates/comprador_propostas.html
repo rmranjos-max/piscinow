@@ -48,7 +48,14 @@
         {{ badge("Vencida" if item.expired else item.label, "green" if item.p.status.value == "aceita" else ("amber" if item.expired or item.p.status.value in ("recusada", "encerrada") else "")) }}
       </div>
       <p class="muted small">Prazo estimado {{ item.p.lead_time_days }} dias · válida até {{ item.p.valid_until.strftime("%d/%m/%Y") }}</p>
-      <ul class="plain-list">{% for description, amount in item["items"] %}<li><span>{{ description }}</span><b>{{ amount }}</b></li>{% endfor %}</ul>
+      <ul class="proposal-items">
+        {% for row in item["items"] %}
+        <li>
+          {% if row.photo %}<a href="{{ row.photo_full }}" class="item-photo"><img src="{{ row.photo }}" alt="Foto de {{ row.description }}" loading="lazy" width="480" height="360"></a>{% endif %}
+          <span class="item-text">{{ row.description }}</span><b>{{ row.amount }}</b>
+        </li>
+        {% endfor %}
+      </ul>
       <p class="small"><b>Escopo:</b> {{ item.p.scope }}</p>
       {% if item.p.exclusions %}<p class="small"><b>Não inclui:</b> {{ item.p.exclusions }}</p>{% endif %}
       {% if item.p.decision_reason %}<p class="small"><b>Motivo da recusa:</b> {{ item.p.decision_reason }}</p>{% endif %}

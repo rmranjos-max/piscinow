@@ -15,7 +15,7 @@ from piscinow.models.proposal import DealMessage, FeasibilityCheck, MessageAutho
 from piscinow.models.qualification import Deal, DealStatus
 from piscinow.proposals.rules import acceptance_blocker, caveats, is_expired
 from piscinow.proposals.service import (
-    NEGOTIABLE, ProposalError, accept_proposal, brl, post_message, reject_proposal,
+    NEGOTIABLE, ProposalError, accept_proposal, brl, item_rows, post_message, reject_proposal,
 )
 from piscinow.qualification.deals import active_deal
 from piscinow.web.deps import get_db
@@ -56,7 +56,7 @@ def _own_decision(db: Session, decision_id: str, comprador: Member) -> MatchingD
     return decision
 
 
-def _stores(db: Session, deal: Deal, today: date) -> list[dict]:
+def _stores(db: Session, deal: Deal, today: date, storage) -> list[dict]:
     """Stores the buyer can deal with: those that said they will analyze or already proposed."""
     entries = []
     for decision, store in db.execute(
@@ -78,7 +78,7 @@ def _stores(db: Session, deal: Deal, today: date) -> list[dict]:
             "proposals": [
                 {"p": p, "label": STATUS_LABELS[p.status.value],
                  "expired": p.status.value == "enviada" and is_expired(p.valid_until, today),
-                 "total": brl(p.total), "items": [(i.description, brl(i.amount)) for i in p.items]}
+                 "total": brl(p.total), "items": item_rows(storage, p)}
                 for p in proposals
             ],
             "messages": [{"mine": m.author == MessageAuthor.COMPRADOR, "text": m.text, "revision": m.is_revision_request} for m in messages],
@@ -96,7 +96,7 @@ def _render(request: Request, db: Session, comprador: Member, *, error: str | No
         check = db.scalar(select(FeasibilityCheck).where(FeasibilityCheck.deal_id == deal.id))
         status = check.status.value if check else None
         accepted = deal.status == DealStatus.ACCEPTED
-        stores = _stores(db, deal, today)
+        stores = _stores(db, deal, today, request.app.state.media_storage)
         accepted_store = db.get(Member, deal.assigned_member_id) if accepted else None
         context.update({
             "deal": deal, "accepted": accepted, "accepted_store": accepted_store,

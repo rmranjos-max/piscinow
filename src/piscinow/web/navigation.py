@@ -54,7 +54,10 @@ AREAS: dict[str, Area] = {
         prefix="/prestador",
         home="/prestador/servicos",
         logout="/prestador/logout",
-        items=(NavItem("Meus serviços", "/prestador/servicos", "wrench"),),
+        items=(
+            NavItem("Instalações", "/prestador/instalacoes", "flag"),
+            NavItem("Meus serviços", "/prestador/servicos", "wrench"),
+        ),
     ),
     "comprador": Area(
         key="comprador",

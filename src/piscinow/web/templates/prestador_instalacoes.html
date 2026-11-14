@@ -1,0 +1,55 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, empty %}
+{% block title %}Instalações{% endblock %}
+{% block content %}
+<p class="eyebrow">Obras</p>
+<h1>Instalações</h1>
+<p class="sub">Projetos em que a equipe da Piscinow indicou você. Você vê o projeto, sem o valor da proposta; os dados de contato do comprador aparecem depois que você aceitar a instalação.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+{% if items %}
+<div class="opp-list">
+  {% for item in items %}
+  <article class="card" aria-labelledby="inst-{{ item.assignment.id }}">
+    <div class="row-between">
+      <h2 id="inst-{{ item.assignment.id }}">{{ item.briefing.codigo }}</h2>
+      {{ badge(item.label, "green" if item.assignment.status.value == "aceita" else ("amber" if item.assignment.status.value == "recusada" else "")) }}
+    </div>
+    <ul class="plain-list">
+      {% for campo in item.briefing.campos %}<li><span>{{ campo.rotulo }}</span><b>{{ campo.valor }}</b></li>{% endfor %}
+      {% if item.store %}<li><span>Loja responsável</span><b>{{ item.store }}</b></li>{% endif %}
+      {% if item.lead_time_days %}<li><span>Prazo estimado da loja</span><b>{{ item.lead_time_days }} dias</b></li>{% endif %}
+    </ul>
+    {% if item.scope %}<p class="small"><b>Escopo da proposta:</b> {{ item.scope }}</p>{% endif %}
+    {% if item.exclusions %}<p class="small"><b>Não incluso:</b> {{ item.exclusions }}</p>{% endif %}
+    <p class="muted small">Motivo da indicação: {{ item.assignment.assigned_reason }}</p>
+
+    {% if item.contact %}
+    <div class="consent-box">
+      <p><b>Você aceitou esta instalação.</b> Contato do comprador:</p>
+      <ul class="plain-list">
+        <li><span>Nome</span><b>{{ item.contact.nome }}</b></li>
+        <li><span>E-mail</span><b>{{ item.contact.email or "—" }}</b></li>
+        <li><span>Telefone</span><b>{{ item.contact.telefone or "—" }}</b></li>
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if item.assignment.status.value == "pendente" %}
+    <form class="review-form" method="post" action="/prestador/instalacoes/{{ item.assignment.id }}/resposta">
+      <label class="visually-hidden" for="motivo-{{ item.assignment.id }}">Motivo, se não puder</label>
+      <input id="motivo-{{ item.assignment.id }}" name="motivo" type="text" maxlength="500" placeholder="Motivo (obrigatório se não puder)">
+      <button class="btn accent" type="submit" name="decisao" value="aceita">Aceito a instalação</button>
+      <button class="btn" type="submit" name="decisao" value="recusada">Não posso</button>
+    </form>
+    {% elif item.assignment.status.value == "recusada" %}
+    <p class="muted small">Motivo informado: {{ item.assignment.response_reason }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+{{ empty("Nenhuma instalação indicada para você no momento.") }}
+{% endif %}
+{% endblock %}

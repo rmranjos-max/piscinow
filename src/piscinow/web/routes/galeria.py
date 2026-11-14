@@ -43,6 +43,8 @@ PAGES = {
     "loja_oportunidades": ("loja_oportunidades.html", "loja", "/loja/oportunidades"),
     "admin_atendimento": ("admin_atendimento.html", "admin", "/admin/lojas"),
     "comprador_propostas": ("comprador_propostas.html", "comprador", "/comprador/propostas"),
+    "prestador_instalacoes": ("prestador_instalacoes.html", "prestador", "/prestador/instalacoes"),
+    "admin_instalador_atendimento": ("admin_instalador_atendimento.html", "admin", "/admin/prestadores"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
     "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
@@ -179,6 +181,34 @@ def _example_context(name: str) -> dict:
                      ]),
                 item(3, "Cliente #77D2", [("Localização", "Vinhedo"), ("Tipo de piscina", "Vinil"), ("Prazo desejado", "Sem prazo definido")],
                      "recusada", "Você recusou"),
+            ],
+        }
+    if name == "admin_instalador_atendimento":
+        return {
+            "installer": NS(id=uid(14), name="Instalações Sul"),
+            "form": {"areas": "Valinhos, Campinas", "service_kinds": ["instalacao", "reparo"], "active": True},
+            "service_kinds": {"instalacao": "Instalação", "manutencao": "Manutenção", "reparo": "Reparo"},
+            "error": None,
+        }
+    if name == "prestador_instalacoes":
+        def job(n, code, campos, status, label, *, contact=None, response_reason=None):
+            return {
+                "assignment": NS(id=uid(120 + n), status=NS(value=status), assigned_reason="Atende Valinhos e já trabalhou com esta loja",
+                                 response_reason=response_reason),
+                "label": label, "briefing": {"codigo": code, "campos": [{"rotulo": r, "valor": v} for r, v in campos]},
+                "store": "Studio Fibra Sul", "scope": "Fornecimento e instalação completa, com 1 visita técnica.",
+                "exclusions": "Paisagismo e cercamento", "lead_time_days": 40, "contact": contact,
+            }
+
+        return {
+            "error": None,
+            "items": [
+                job(1, "Cliente #A3F1", [("Localização", "Valinhos"), ("Tipo de piscina", "Fibra"), ("Dimensões", "7 x 3 m")],
+                    "pendente", "Aguardando a sua resposta"),
+                job(2, "Cliente #09BC", [("Localização", "Campinas"), ("Tipo de piscina", "Vinil")], "aceita", "Você aceitou",
+                    contact={"nome": "Marina Duarte", "email": "marina@exemplo.com.br", "telefone": "(19) 99999-0000"}),
+                job(3, "Cliente #77D2", [("Localização", "Vinhedo"), ("Tipo de piscina", "Alvenaria")], "recusada", "Você recusou",
+                    response_reason="Agenda cheia até dezembro"),
             ],
         }
     if name == "comprador_propostas":

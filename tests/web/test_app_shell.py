@@ -79,7 +79,7 @@ def test_the_gallery_shows_every_shared_component(client):
 MIGRATED = """admin_compradores admin_corrections admin_cronograma admin_lojas admin_pagamento_detalhe admin_pagamentos
 admin_prestadores admin_queue comprador_pagamento comprador_projeto loja_produto_editar loja_produtos
 prestador_servico_editar prestador_servicos comprador_consultor admin_oportunidades admin_oportunidade_detalhe
-admin_atendimento loja_oportunidades comprador_propostas""".split()
+admin_atendimento loja_oportunidades comprador_propostas prestador_instalacoes admin_instalador_atendimento""".split()
 
 
 @pytest.mark.parametrize("name", MIGRATED)
@@ -104,6 +104,8 @@ PAGES = {
     "admin_atendimento": ("Atendimento · Studio Fibra Sul", "/admin/lojas"),
     "comprador_consultor": ("Conte o que você imagina", "/comprador/consultor"),
     "comprador_propostas": ("Propostas", "/comprador/propostas"),
+    "prestador_instalacoes": ("Instalações", "/prestador/instalacoes"),
+    "admin_instalador_atendimento": ("Atendimento · Instalações Sul", "/admin/prestadores"),
     "comprador_pagamento": ("Pagamento do projeto", "/comprador/projeto"),
     "comprador_inicio": ("Olá, Marina.", "/comprador"),
     "comprador_obra": ("Acompanhar obra", "/comprador/obra"),

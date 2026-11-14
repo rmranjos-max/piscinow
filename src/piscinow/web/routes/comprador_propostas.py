@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from piscinow.comprador_auth import require_comprador
+from piscinow.installation.service import responsible_installer
 from piscinow.matching.inbox import decision_is_visible
 from piscinow.models.matching import MatchingDecision, PartnerResponse
 from piscinow.models.member import Member
@@ -105,6 +106,7 @@ def _render(request: Request, db: Session, comprador: Member, *, error: str | No
             "caveats": caveats(check.items) if check else [],
             "blocker": acceptance_blocker(status),
             "can_negotiate": deal.status in NEGOTIABLE,
+            "installer": responsible_installer(db, deal) if accepted else None,
         })
     return request.app.state.templates.TemplateResponse(request, "comprador_propostas.html", context, status_code=status_code)
 

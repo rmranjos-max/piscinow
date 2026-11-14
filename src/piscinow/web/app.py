@@ -21,6 +21,7 @@ from piscinow.web.sensitive_headers import SensitivePathHeadersMiddleware
 from piscinow.web.routes import (
     admin,
     admin_atendimento,
+    admin_instalacao,
     admin_oportunidades,
     chat,
     comprador,
@@ -33,6 +34,7 @@ from piscinow.web.routes import (
     loja_oportunidades,
     pages,
     prestador,
+    prestador_instalacoes,
     vitrine,
 )
 
@@ -122,6 +124,8 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(admin_oportunidades.router)
     app.include_router(admin_atendimento.router)
+    app.include_router(admin_instalacao.router)
+    app.include_router(prestador_instalacoes.router)
     app.include_router(loja.router)
     app.include_router(prestador.router)
     app.include_router(loja_oportunidades.router)

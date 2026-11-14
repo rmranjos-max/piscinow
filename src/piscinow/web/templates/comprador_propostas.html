@@ -19,6 +19,8 @@
 <section class="card cta-card" aria-labelledby="aceita">
   <div class="row-between"><h2 id="aceita">Proposta aceita</h2>{{ badge("Aceita", "green") }}</div>
   <p>Você escolheu <b>{{ accepted_store.name }}</b>. A loja recebeu o seu contato e vai falar com você. As demais lojas não têm mais acesso ao seu briefing.</p>
+  {% if installer %}<p><b>Instalador responsável:</b> {{ installer.name }}. Ele recebeu o seu contato para combinar a obra.</p>
+  {% else %}<p class="muted small">A equipe ainda vai indicar o instalador responsável pela obra.</p>{% endif %}
 </section>
 {% endif %}
 

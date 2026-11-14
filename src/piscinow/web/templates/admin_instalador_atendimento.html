@@ -1,0 +1,31 @@
+{% extends "app_shell.html" %}
+{% block title %}Atendimento do instalador{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin/prestadores">Prestadores</a></p>
+<h1>Atendimento · {{ installer.name }}</h1>
+<p class="sub">Ajuda a equipe a escolher quem atende cada obra. O sistema só destaca quem atende a cidade; quem decide é a equipe.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<form class="card narrow" method="post" action="/admin/prestadores/{{ installer.id }}/atendimento">
+  <div class="field">
+    <label for="areas">Cidades atendidas</label>
+    <textarea id="areas" name="areas" rows="3" maxlength="1000" placeholder="Valinhos, Campinas, Vinhedo">{{ form.areas }}</textarea>
+    <p class="muted small">Separe por vírgula ou por linha. A cidade do comprador precisa conter o nome inteiro.</p>
+  </div>
+
+  <fieldset class="field check-group">
+    <legend>Tipos de serviço</legend>
+    {% for value, label in service_kinds.items() %}
+    <label class="check"><input type="checkbox" name="service_kinds" value="{{ value }}"{% if value in form.service_kinds %} checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+
+  <label class="check"><input type="checkbox" name="active" value="on"{% if form.active %} checked{% endif %}> Perfil ativo</label>
+
+  <div class="row-actions form-actions">
+    <button class="btn accent" type="submit">Salvar</button>
+    <a class="btn" href="/admin/prestadores">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

@@ -135,6 +135,37 @@
 </section>
 {% endif %}
 
+{% if installation %}
+<section class="card" id="instalacao" aria-labelledby="inst-titulo">
+  <div class="row-between">
+    <h2 id="inst-titulo">Instalação</h2>
+    {% if installation.live %}{{ badge(installation.live.label, "green" if installation.live.a.status.value == "aceita" else "amber") }}{% else %}{{ badge("Sem instalador", "amber") }}{% endif %}
+  </div>
+  {% if installation.live %}<p>Instalador: <b>{{ installation.live.installer }}</b> · atribuído por {{ installation.live.a.assigned_by }} em {{ installation.live.a.assigned_at.strftime("%d/%m/%Y") }}.</p>{% endif %}
+  {% if installation.history %}
+  <ul class="plain-list">
+    {% for h in installation.history %}
+    <li><span>{{ h.installer }} · {{ h.label }}</span><b>{% if h.a.status.value == "recusada" %}{{ h.a.response_reason }}{% elif h.a.status.value == "cancelada" %}{{ h.a.cancel_reason }}{% else %}{{ h.a.assigned_reason }}{% endif %}</b></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if not installation.live or installation.live.a.status.value == "pendente" %}
+  <form method="post" action="/admin/oportunidades/{{ qualification.id }}/instalador">
+    <h3>{{ "Atribuir instalador" if not installation.live else "Reatribuir instalador" }}</h3>
+    <div class="field"><label for="instalador">Instalador</label>
+      <select id="instalador" name="instalador" required>
+        {% for c in installation.candidates %}<option value="{{ c.member.id }}">{{ c.member.name }} — {{ c.note }}</option>{% endfor %}
+      </select>
+      <p class="muted small">A lista apenas destaca quem atende a cidade do comprador; a escolha é da equipe.</p></div>
+    <div class="field"><label for="motivo-inst">Motivo (obrigatório)</label>
+      <input id="motivo-inst" name="motivo" type="text" maxlength="500" required></div>
+    <button class="btn accent" type="submit">{{ "Atribuir instalador" if not installation.live else "Reatribuir" }}</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if matching is not none %}
 <section class="card" id="matching" aria-labelledby="matching-titulo">
   <div class="row-between">

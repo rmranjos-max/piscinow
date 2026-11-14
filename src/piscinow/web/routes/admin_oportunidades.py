@@ -6,10 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from piscinow.auth import require_admin
+from piscinow.installation.service import InstallationError, assign_installer, candidate_installers
 from piscinow.matching.rules import is_effective
 from piscinow.matching.service import EDITABLE, run_matching, set_override, share_with_partners
 from piscinow.models.admin import AdminUser
 from piscinow.models.conversation import MessageRole
+from piscinow.models.installation import AssignmentStatus, InstallerAssignment
 from piscinow.models.matching import MatchingDecision, MatchOverride
 from piscinow.models.member import Member, ProfileType
 from piscinow.models.proposal import DealMessage, FeasibilityCheck, MessageAuthor, Proposal
@@ -137,6 +139,7 @@ def _detail_context(db: Session, qualification: LeadQualification, error: str | 
         "field_keys": {key: definition.label for key, definition in FIELDS.items()},
         "matching": _matching_rows(db, deal) if deal is not None and not closed_deal(deal) else None,
         **_negotiation_context(db, deal),
+        "installation": _installation_context(db, deal),
         "can_edit_matching": deal is not None and deal.status in EDITABLE,
         "can_share": deal is not None and deal.status == DealStatus.MATCHED,
         "error": error,
@@ -183,6 +186,25 @@ def _negotiation_context(db: Session, deal: Deal | None) -> dict:
         "state_options": [(s, STATE_LABELS[s]) for s in ITEM_STATES],
         "status_options": list(FEASIBILITY_LABELS.items()),
     }
+
+
+ASSIGNMENT_LABELS = {
+    "pendente": "Aguardando resposta", "aceita": "Aceita", "recusada": "Recusada", "cancelada": "Cancelada",
+}
+
+
+def _installation_context(db: Session, deal: Deal | None) -> dict | None:
+    if deal is None or deal.status != DealStatus.ACCEPTED:
+        return None
+    names = {m.id: m.name for m in db.scalars(select(Member).where(Member.profile_type == ProfileType.PRESTADOR))}
+    history = [
+        {"a": a, "installer": names.get(a.installer_member_id, "—"), "label": ASSIGNMENT_LABELS[a.status.value]}
+        for a in db.scalars(
+            select(InstallerAssignment).where(InstallerAssignment.deal_id == deal.id).order_by(InstallerAssignment.assigned_at.desc())
+        )
+    ]
+    live = next((h for h in history if h["a"].status in (AssignmentStatus.PENDENTE, AssignmentStatus.ACEITA)), None)
+    return {"history": history, "live": live, "candidates": candidate_installers(db, deal)}
 
 
 def closed_deal(deal: Deal) -> bool:
@@ -373,3 +395,27 @@ async def salvar_viabilidade(
     except ProposalError as exc:
         return _detail_error(request, db, qualification, " ".join(exc.errors))
     return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#viabilidade", status_code=303)
+
+
+@router.post("/{qualification_id}/instalador")
+async def atribuir_instalador(
+    request: Request,
+    qualification_id: str,
+    instalador: str = Form(""),
+    motivo: str = Form(""),
+    db: Session = Depends(get_db),
+    admin: AdminUser = Depends(require_admin),
+):
+    qualification = _qualification_or_404(db, qualification_id)
+    deal = _active_deal_or_404(db, qualification)
+    try:
+        installer = db.get(Member, uuid.UUID(instalador))
+    except ValueError:
+        installer = None
+    try:
+        if installer is None:
+            raise InstallationError("Escolha um instalador da lista.")
+        assign_installer(db, deal, installer, reason=motivo, actor=f"admin:{admin.email}")
+    except InstallationError as exc:
+        return _detail_error(request, db, qualification, " ".join(exc.errors))
+    return RedirectResponse(url=f"/admin/oportunidades/{qualification.id}#instalacao", status_code=303)

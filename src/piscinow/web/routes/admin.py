@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace as NS
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -20,6 +21,8 @@ from piscinow.models.memory import MemoryKind, MemorySource
 from piscinow.models.payment import AllocationStatus, Payment, PaymentAllocation, PaymentStage, PaymentStatus
 from piscinow.models.product import Product
 from piscinow.models.project import Project, ProjectService, ProjectStatus
+from piscinow.models.proposal import Proposal
+from piscinow.proposals.project_link import ScheduleError, build_schedule_from_proposal
 from piscinow.models.service import Service
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import admin_login_rate_limit_string, limiter
@@ -208,28 +211,59 @@ async def pagamentos(
     templates = request.app.state.templates
     paid_project_ids = select(Payment.project_id)
     rows = db.execute(
-        select(Project, Member, Product)
+        select(Project, Member)
         .join(Member, Project.member_id == Member.id)
-        .join(Product, Project.product_id == Product.id)
-        .where(Project.status == ProjectStatus.CONFIRMADO, Project.id.not_in(paid_project_ids))
+        .where(
+            Project.status == ProjectStatus.CONFIRMADO, Project.id.not_in(paid_project_ids),
+            (Project.product_id.is_not(None)) | (Project.proposal_id.is_not(None)),
+        )
         .order_by(Project.updated_at.desc())
     ).all()
-    items = [{"project": row[0], "comprador": row[1], "product": row[2]} for row in rows]
+    items = [
+        {"project": project, "comprador": member, "label": _project_label(db, project)} for project, member in rows
+    ]
 
     payment_rows = db.execute(
-        select(Payment, Project, Member, Product)
+        select(Payment, Project, Member)
         .join(Project, Payment.project_id == Project.id)
         .join(Member, Project.member_id == Member.id)
-        .join(Product, Project.product_id == Product.id)
         .order_by(Payment.created_at.desc())
     ).all()
     payments = [
-        {"payment": row[0], "project": row[1], "comprador": row[2], "product": row[3]} for row in payment_rows
+        {"payment": row[0], "project": row[1], "comprador": row[2], "label": _project_label(db, row[1])}
+        for row in payment_rows
     ]
     return templates.TemplateResponse(request, "admin_pagamentos.html", {"items": items, "payments": payments})
 
 
 MAX_PAYMENT_AMOUNT = Decimal("99999999.99")
+
+STAGE_LABELS = {
+    PaymentStage.TERRAPLANAGEM: "Terraplanagem", PaymentStage.ESTRUTURA: "Estrutura",
+    PaymentStage.REVESTIMENTO: "Revestimento", PaymentStage.ACABAMENTO: "Acabamento",
+}
+
+
+def _project_label(db: Session, project: Project) -> str:
+    if project.proposal_id is not None:
+        proposal = db.get(Proposal, project.proposal_id)
+        store = db.get(Member, proposal.partner_member_id)
+        return f"Proposta v{proposal.version} de {store.name}"
+    product = db.get(Product, project.product_id) if project.product_id else None
+    return product.name if product else "—"
+
+
+def _proposal_schedule_page(request: Request, db: Session, project: Project, *, error=None, form=None, status_code=200):
+    proposal = db.get(Proposal, project.proposal_id)
+    return request.app.state.templates.TemplateResponse(
+        request, "admin_cronograma_proposta.html",
+        {
+            "project": project, "proposal": proposal, "store": db.get(Member, proposal.partner_member_id),
+            "buyer": db.get(Member, project.member_id), "error": error, "form": form or {},
+            "stages": [NS(value=stage.value, label=label) for stage, label in STAGE_LABELS.items()],
+        },
+        status_code=status_code,
+    )
 
 
 def _parse_amount(raw) -> Decimal | None:
@@ -288,6 +322,8 @@ async def cronograma_form(
     existing = db.scalar(select(Payment).where(Payment.project_id == project.id))
     if existing is not None:
         raise HTTPException(status_code=400, detail="Este projeto ja tem um pagamento.")
+    if project.proposal_id is not None:
+        return _proposal_schedule_page(request, db, project)
     product = db.get(Product, project.product_id)
     services = _project_services(db, project.id)
     return templates.TemplateResponse(
@@ -311,6 +347,28 @@ async def cronograma_submit(
     existing = db.scalar(select(Payment).where(Payment.project_id == project.id))
     if existing is not None:
         raise HTTPException(status_code=400, detail="Este projeto ja tem um pagamento.")
+
+    if project.proposal_id is not None:
+        form = await request.form()
+        raw = {stage.value: str(form.get(f"fase_{stage.value}", "")).strip() for stage in PaymentStage}
+        amounts = {}
+        for stage in PaymentStage:
+            text = raw[stage.value]
+            if not text or text in ("0", "0,00", "0.00"):
+                amounts[stage] = Decimal("0")
+                continue
+            value = _parse_amount(text)
+            if value is None:
+                return _proposal_schedule_page(
+                    request, db, project, form=raw, status_code=400,
+                    error=f"Informe um valor válido para {STAGE_LABELS[stage]} (ex.: 12000,00).",
+                )
+            amounts[stage] = value
+        try:
+            payment = build_schedule_from_proposal(db, project, amounts)
+        except ScheduleError as exc:
+            return _proposal_schedule_page(request, db, project, form=raw, error=str(exc), status_code=400)
+        return RedirectResponse(url=f"/admin/pagamentos/{payment.id}", status_code=303)
 
     product = db.get(Product, project.product_id)
     services = _project_services(db, project.id)

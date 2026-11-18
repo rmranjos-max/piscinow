@@ -25,6 +25,10 @@ class Project(Base):
     status: Mapped[ProjectStatus] = mapped_column(
         SAEnum(ProjectStatus, name="project_status"), default=ProjectStatus.RASCUNHO
     )
+    # Set when the project comes from an accepted proposal: its total and store define the payment.
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("proposals.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

@@ -15,6 +15,7 @@ from piscinow.models.proposal import (
     DealMessage, FeasibilityCheck, FeasibilityStatus, MessageAuthor, Proposal, ProposalItem, ProposalStatus,
 )
 from piscinow.models.qualification import Deal, DealStatus
+from piscinow.proposals.project_link import link_accepted_proposal
 from piscinow.proposals.rules import acceptance_blocker, is_expired, total_of, validate_feasibility, validate_proposal
 from piscinow.qualification.deals import record_event
 
@@ -229,6 +230,7 @@ def accept_proposal(db: Session, proposal: Proposal, buyer: Member, *, today: da
         to_status=deal.status.value, note=f"{store.name} v{proposal.version} ({brl(proposal.total)})",
     )
     record_event(db, deal, "contact_released", actor="sistema", note=f"Contato liberado para {store.name}")
+    link_accepted_proposal(db, deal, proposal)
 
 
 def save_feasibility(

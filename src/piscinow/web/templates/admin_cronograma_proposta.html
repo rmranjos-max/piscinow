@@ -1,0 +1,30 @@
+{% extends "app_shell.html" %}
+{% block title %}Montar cronograma{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="/admin/pagamentos">Pagamentos</a></p>
+<h1>Montar cronograma</h1>
+<p class="sub">Divida o valor aceito pelo comprador nas fases da obra. Cada fase é repassada a {{ store.name }}, que fez a proposta, quando a equipe liberar.</p>
+
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+
+<section class="card narrow" aria-labelledby="resumo">
+  <h2 id="resumo">Proposta aceita</h2>
+  <ul class="plain-list">
+    <li><span>Comprador</span><b>{{ buyer.name }}</b></li>
+    <li><span>Loja</span><b>{{ store.name }}</b></li>
+    <li><span>Versão</span><b>{{ proposal.version }}</b></li>
+    <li><span>Total aceito</span><b>R$ {{ proposal.total | brl }}</b></li>
+  </ul>
+</section>
+
+<form class="card narrow" method="post" action="/admin/pagamentos/{{ project.id }}/cronograma">
+  <p class="muted small">A soma das fases precisa ser exatamente R$ {{ proposal.total | brl }}. Deixe 0 na fase que não terá repasse.</p>
+  {% for stage in stages %}
+  <div class="field">
+    <label for="fase-{{ stage.value }}">{{ stage.label }} (R$)</label>
+    <input id="fase-{{ stage.value }}" type="text" inputmode="decimal" name="fase_{{ stage.value }}" value="{{ form.get(stage.value, '') }}" placeholder="0,00">
+  </div>
+  {% endfor %}
+  <button class="btn accent" type="submit">Salvar cronograma</button>
+</form>
+{% endblock %}

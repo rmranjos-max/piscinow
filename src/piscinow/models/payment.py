@@ -46,7 +46,8 @@ class Payment(Base):
 class PaymentAllocation(Base):
     __tablename__ = "payment_allocations"
     __table_args__ = (
-        CheckConstraint("(product_id IS NULL) <> (service_id IS NULL)", name="ck_payment_allocations_one_item"),
+        # Each allocation comes from exactly one origin: a product, a service, or an accepted proposal.
+        CheckConstraint("num_nonnulls(product_id, service_id, proposal_id) = 1", name="ck_payment_allocations_one_item"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -58,6 +59,9 @@ class PaymentAllocation(Base):
     )
     service_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("services.id"), nullable=True
+    )
+    proposal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("proposals.id"), nullable=True
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     status: Mapped[AllocationStatus] = mapped_column(

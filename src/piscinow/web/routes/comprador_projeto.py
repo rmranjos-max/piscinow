@@ -18,10 +18,15 @@ from piscinow.models.service import Service, ServiceKind
 from piscinow.payment.payment_provider import PaymentProvider, PaymentProviderError
 from piscinow.rate_limit import limiter, chat_rate_limit_string
 from piscinow.web.deps import get_db, get_llm_provider, get_payment_provider, require_payments_enabled
+from piscinow.installation.service import responsible_installer
+from piscinow.models.proposal import FeasibilityCheck
+from piscinow.models.qualification import Deal
+from piscinow.proposals.rules import caveats
+from piscinow.proposals.service import item_rows
 from piscinow.qualification.deals import active_deal
-from piscinow.qualification.fields import FIELDS, REQUIRED
+from piscinow.qualification.fields import REQUIRED, label_for
 from piscinow.qualification.service import find_qualification
-from piscinow.web.journey import comprador_journey, consultor_card, stage_overview
+from piscinow.web.journey import buyer_journey, stage_overview
 
 router = APIRouter(prefix="/comprador")
 
@@ -64,44 +69,91 @@ def _read_only_overview(db: Session, comprador: Member):
     return project, product, services, payment, rows
 
 
-@router.get("", response_class=HTMLResponse)
-async def inicio(
-    request: Request,
-    db: Session = Depends(get_db),
-    comprador: Member = Depends(require_comprador),
-):
-    # Opening the home page never creates a draft project: that only happens in "Meu projeto".
-    project, product, services, payment, rows = _read_only_overview(db, comprador)
-    journey = comprador_journey(
-        has_product=product is not None,
-        confirmed=project is not None and project.status == ProjectStatus.CONFIRMADO,
-        payment_status=payment.status.value if payment else None,
-        all_released=bool(rows) and all(status == "liberado" for _, status, _, _ in rows),
-    )
-    first_name = (comprador.name or "").split()[0] if (comprador.name or "").strip() else ""
-    # Read-only like the rest of this page: the conversation itself only starts in the consultor.
+FEASIBILITY_BADGES = {
+    "pending": ("Em avaliação", "amber", "A equipe está avaliando o terreno."),
+    "conditionally_approved": ("Aprovada com ressalvas", "green", "Aprovada pela equipe."),
+    "approved": ("Aprovada", "green", "O terreno foi aprovado pela equipe."),
+    "rejected": ("Reprovada", "amber", "A equipe encontrou um impeditivo. Ela vai conversar com você."),
+}
+BRIEFING_BADGES = {
+    "none": ("Não iniciado", ""), "in_progress": ("Em construção", "amber"),
+    "declined": ("Aguardando sua autorização", "amber"), "done": ("Compartilhado", "green"),
+}
+
+
+def _journey_context(db: Session, comprador: Member) -> dict:
+    """Everything the buyer's home and project pages read. Never creates anything."""
+    project, _, _, payment, rows = _read_only_overview(db, comprador)
     qualification = find_qualification(db, comprador)
     values = qualification.values() if qualification else {}
-    deal = active_deal(db, comprador.id)
-    consultor = consultor_card(
-        started=qualification is not None,
-        missing=[FIELDS[key].label for key in REQUIRED if key not in values],
-        consent=qualification.consent.value if qualification else "nao_respondido",
-        deal_code=deal.code if deal else None,
+    missing = [key for key in REQUIRED if key not in values]
+    consent = qualification.consent.value if qualification else None
+    if qualification is None:
+        briefing = "none"
+    elif not missing and consent == "concedido":
+        briefing = "done"
+    elif not missing and consent == "recusado":
+        briefing = "declined"
+    else:
+        briefing = "in_progress"
+
+    deal = active_deal(db, comprador.id) or db.scalar(
+        select(Deal).where(Deal.member_id == comprador.id).order_by(Deal.number.desc()).limit(1)
     )
     open_proposals = 0
+    feasibility = None
     if deal is not None:
         open_proposals = db.scalar(
             select(func.count()).select_from(Proposal).where(
                 Proposal.deal_id == deal.id, Proposal.status == ProposalStatus.ENVIADA
             )
         )
+        check = db.scalar(select(FeasibilityCheck).where(FeasibilityCheck.deal_id == deal.id))
+        if check is not None:
+            label, tone, text = FEASIBILITY_BADGES[check.status.value]
+            feasibility = {"label": label, "tone": tone, "text": text, "caveats": caveats(check.items)}
+
+    proposal = db.get(Proposal, project.proposal_id) if project is not None and project.proposal_id else None
+    journey = buyer_journey(
+        briefing=briefing, deal_status=deal.status.value if deal else None, open_proposals=open_proposals,
+        payment_status=payment.status.value if payment else None,
+        all_released=bool(rows) and all(status == "liberado" for _, status, _, _ in rows),
+        project_linked=proposal is not None or payment is not None,
+    )
+    summary = " · ".join(
+        label_for(key, values[key]) for key in ("tipo_piscina", "localizacao", "dimensoes", "prazo") if key in values
+    )
+    label, tone = BRIEFING_BADGES[briefing]
+    return {
+        "journey": journey, "deal": deal, "payment": payment, "project": project, "proposal": proposal,
+        "feasibility": feasibility, "briefing_summary": summary, "briefing_badge": {"label": label, "tone": tone},
+    }
+
+
+def _accepted_summary(request: Request, db: Session, proposal: Proposal) -> dict:
+    store = db.get(Member, proposal.partner_member_id)
+    first = proposal.items[0] if proposal.items else None
+    storage = request.app.state.media_storage
+    photo_key = next((item.photo_thumb_key for item in proposal.items if item.photo_thumb_key), None)
+    return {
+        "store": store.name, "version": proposal.version, "total": proposal.total,
+        "item": first.description if first else "", "photo": storage.url(photo_key) if photo_key else None,
+    }
+
+
+@router.get("", response_class=HTMLResponse)
+async def inicio(
+    request: Request,
+    db: Session = Depends(get_db),
+    comprador: Member = Depends(require_comprador),
+):
+    context = _journey_context(db, comprador)
+    first_name = (comprador.name or "").split()[0] if (comprador.name or "").strip() else ""
+    proposal = context["proposal"]
     return request.app.state.templates.TemplateResponse(
         request,
         "comprador_inicio.html",
-        {"first_name": first_name, "project": project, "product": product, "services": services,
-         "payment": payment, "journey": journey, "consultor": consultor,
-         "deal": deal, "open_proposals": open_proposals},
+        {**context, "first_name": first_name, "accepted": _accepted_summary(request, db, proposal) if proposal else None},
     )
 
 
@@ -112,6 +164,7 @@ async def obra(
     comprador: Member = Depends(require_comprador),
 ):
     _, _, _, payment, rows = _read_only_overview(db, comprador)
+    request.scope["shell_path"] = "/comprador/projeto"  # the work belongs to "Meu projeto" in the menu
     return request.app.state.templates.TemplateResponse(
         request, "comprador_obra.html", {"payment": payment, "stages": stage_overview(rows)}
     )
@@ -124,12 +177,29 @@ async def projeto(
     comprador: Member = Depends(require_comprador),
 ):
     templates = request.app.state.templates
-    project = _get_or_create_project(db, comprador.id)
+    context = _journey_context(db, comprador)
+    project, proposal = context["project"], context["proposal"]
+    if proposal is not None:
+        deal = db.get(Deal, proposal.deal_id)
+        installer = responsible_installer(db, deal) if deal else None
+        view = {
+            "store": db.get(Member, proposal.partner_member_id).name, "version": proposal.version,
+            "accepted_at": proposal.decided_at, "lead_time_days": proposal.lead_time_days, "total": proposal.total,
+            "scope": proposal.scope, "exclusions": proposal.exclusions,
+            "items": item_rows(request.app.state.media_storage, proposal),
+            "installer": installer.name if installer else None,
+        }
+        return templates.TemplateResponse(
+            request, "comprador_meu_projeto.html", {**context, "project": view}
+        )
+    if project is None or project.status != ProjectStatus.CONFIRMADO:
+        # The project is born from an accepted proposal; nothing is created by opening this page.
+        return templates.TemplateResponse(request, "comprador_meu_projeto.html", {**context, "project": None})
+
+    # A project of the old path (product chosen in the vitrine), kept readable for existing data.
     product = db.get(Product, project.product_id) if project.product_id else None
     services = _project_services(db, project.id)
-    payment = None
-    if project.status == ProjectStatus.CONFIRMADO:
-        payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
+    payment = db.scalar(select(Payment).where(Payment.project_id == project.id))
     return templates.TemplateResponse(
         request,
         "comprador_projeto.html",

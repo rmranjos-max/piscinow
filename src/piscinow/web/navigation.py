@@ -71,10 +71,8 @@ AREAS: dict[str, Area] = {
             NavItem("Início", "/comprador", "home", exact=True),
             NavItem("Consultor", "/comprador/consultor", "chat"),
             NavItem("Propostas", "/comprador/propostas", "doc"),
-            NavItem("Explorar produtos", "/vitrine/produtos", "compass"),
-            NavItem("Explorar serviços", "/vitrine/servicos", "wrench"),
             NavItem("Meu projeto", "/comprador/projeto", "folder"),
-            NavItem("Acompanhar obra", "/comprador/obra", "flag"),
+            NavItem("Explorar piscinas", "/vitrine/produtos", "compass"),
         ),
     ),
 }
@@ -102,6 +100,26 @@ def nav_items_for(area: Area, path: str) -> list[dict]:
     ]
 
 
+# Short confirmations after an action, chosen by code so a link can never inject text.
+FLASH = {
+    "salvo": "Alterações salvas.",
+    "enviada": "Enviada.",
+    "mensagem": "Mensagem enviada.",
+    "revisao": "Pedido de revisão enviado. A loja foi avisada.",
+    "recusada": "Proposta recusada. A loja viu o motivo.",
+    "aceita": "Proposta aceita.",
+    "resposta": "Resposta registrada.",
+    "proposta": "Proposta enviada ao comprador.",
+    "cronograma": "Cronograma salvo.",
+    "viabilidade": "Viabilidade salva.",
+    "atribuido": "Instalador atribuído.",
+    "matching": "Matching executado.",
+    "encaminhada": "Briefing encaminhado às lojas.",
+    "revisada": "Revisão registrada.",
+    "perdida": "Oportunidade marcada como perdida.",
+}
+
+
 def shell_context(request) -> dict:
     forced = request.scope.get("shell_area")
     area = AREAS.get(forced) if forced else area_for_path(request.url.path)
@@ -110,6 +128,7 @@ def shell_context(request) -> dict:
     # The component gallery pins a path so a menu item shows as active.
     path = request.scope.get("shell_path", request.url.path)
     return {
+        "flash": FLASH.get(request.query_params.get("ok", "")),
         "shell": {
             "label": area.label,
             "home": area.home,

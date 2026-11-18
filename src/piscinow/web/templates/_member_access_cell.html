@@ -7,7 +7,7 @@
 {% endif %}
 {% if member.set_password_token %}
   <br><span class="mono">{{ base_url }}/{{ area }}/definir-senha/{{ member.set_password_token }}</span>
-  <br><small>v&aacute;lido at&eacute; {{ member.set_password_token_expires_at.strftime("%d/%m %H:%M") }} (UTC)</small>
+  <br><small>v&aacute;lido at&eacute; {{ member.set_password_token_expires_at | local("%d/%m %H:%M") }}</small>
 {% endif %}
 <form method="post" action="/admin/membros/{{ member.id }}/novo-link-senha" style="margin-top:6px;">
   <button class="mini-btn" type="submit">{% if member.password_hash %}Gerar link de nova senha{% else %}Gerar novo link de acesso{% endif %}</button>

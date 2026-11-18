@@ -1,0 +1,63 @@
+{% extends "app_shell.html" %}
+{% from "_components.html" import badge, empty %}
+{% block title %}Meu projeto{% endblock %}
+{% block content %}
+<p class="eyebrow">Seu projeto</p>
+<h1>Meu projeto</h1>
+
+{% if not project %}
+<p class="sub">O seu projeto nasce quando você aceita a proposta de uma loja. Até lá, o caminho é este:</p>
+<section class="card next-step cta-card" aria-labelledby="proximo">
+  {{ badge("Próximo passo") }}
+  <h2 id="proximo">{{ journey.next.title }}</h2>
+  <p>{{ journey.next.text }}</p>
+  {% if journey.next.href %}<a class="btn accent" href="{{ journey.next.href }}">{{ journey.next.cta }}</a>{% endif %}
+</section>
+{% else %}
+<p class="sub">A proposta que você aceitou é o seu projeto. Ela não muda mais; ajustes viram uma conversa com a loja.</p>
+
+<div class="grid cols2">
+  <section class="card" aria-labelledby="proposta">
+    <div class="row-between">
+      <h2 id="proposta">{{ project.store }}</h2>
+      {{ badge("Versão " ~ project.version ~ " aceita", "green") }}
+    </div>
+    <p class="muted small">Aceita em {{ project.accepted_at | local("%d/%m/%Y") }} · prazo estimado de {{ project.lead_time_days }} dias</p>
+    <ul class="proposal-items">
+      {% for row in project["items"] %}
+      <li>
+        {% if row.photo %}<a href="{{ row.photo_full }}" class="item-photo"><img src="{{ row.photo }}" alt="Foto de {{ row.description }}" loading="lazy" width="480" height="360"></a>{% endif %}
+        <span class="item-text">{{ row.description }}</span><b>{{ row.amount }}</b>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="product-price">Total: R$ {{ project.total | brl }}</p>
+    <p class="small"><b>Escopo:</b> {{ project.scope }}</p>
+    {% if project.exclusions %}<p class="small"><b>Não inclui:</b> {{ project.exclusions }}</p>{% endif %}
+  </section>
+
+  <div>
+    <section class="card" aria-labelledby="pagamento">
+      <div class="row-between">
+        <h2 id="pagamento">Pagamento por fases</h2>
+        {% if payment %}{{ badge("Pago" if payment.status.value == "pago" else "Pendente", "green" if payment.status.value == "pago" else "amber") }}{% else %}{{ badge("Em preparação", "amber") }}{% endif %}
+      </div>
+      {% if payment %}
+      <p>Total: <b>R$ {{ payment.total_amount | brl }}</b>, repassado à loja fase a fase, conforme a obra avança.</p>
+      <div class="row-actions">
+        <a class="btn{% if payment.status.value != 'pago' %} accent{% endif %}" href="/comprador/projeto/pagamento">Ver pagamento</a>
+        <a class="btn" href="/comprador/obra">Acompanhar a obra</a>
+      </div>
+      {% else %}
+      <p class="muted">A equipe está montando o pagamento por fases a partir desta proposta. Ele aparece aqui quando estiver pronto.</p>
+      {% endif %}
+    </section>
+    <section class="card" aria-labelledby="instalador">
+      <h2 id="instalador">Instalação</h2>
+      {% if project.installer %}<p><b>{{ project.installer }}</b> é o instalador responsável e já recebeu o seu contato.</p>
+      {% else %}<p class="muted">A equipe ainda vai indicar o instalador responsável pela obra.</p>{% endif %}
+    </section>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

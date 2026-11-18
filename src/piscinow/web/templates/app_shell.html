@@ -28,6 +28,7 @@
         {{ badge(shell.label) }}
       </header>
       <main class="main" id="conteudo" tabindex="-1">
+        {% if flash %}<p class="status-ok" role="status">{{ flash }}</p>{% endif %}
         {% block content %}{% endblock %}
       </main>
     </div>

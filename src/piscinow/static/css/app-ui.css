@@ -207,7 +207,7 @@ small { color: var(--muted); }
 .error { color: var(--danger); font-weight: 600; margin: 0 0 12px; }
 .empty-note { color: var(--muted); padding: 14px 0; }
 
-.stepper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; padding: 0; list-style: none; }
+.stepper { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; padding: 0; list-style: none; }
 .step { padding: 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 700; }
 .step em { display: block; font-style: normal; color: var(--muted); font-size: 11px; margin-bottom: 6px; }
 .step.done { border-color: var(--badge-green-text); }
@@ -339,6 +339,9 @@ details.shortcut { margin-bottom: 16px; }
 .product-body h2 { margin: 0; font-size: 18px; }
 .product-body p { margin: 0; }
 .product-price { font: 800 20px/1.2 var(--font-display); margin: 6px 0 8px; }
+.project-summary { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 0 14px; }
+.project-summary img { width: 120px; height: 90px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+.project-summary p { margin: 0; flex: 1 1 160px; min-width: 0; }
 .filter-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 6px; }
 .filter-tabs a { padding: 7px 13px; border-radius: 100px; border: 1px solid var(--line); background: var(--surface); color: var(--nav-text); font-size: 13px; font-weight: 700; text-decoration: none; }
 .filter-tabs a[aria-current="page"] { background: var(--nav-active-bg); color: var(--nav-active-text); border-color: var(--link); }

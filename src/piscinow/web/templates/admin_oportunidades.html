@@ -22,7 +22,7 @@
       <td>{{ row.buyer.name }}{% if row.qualification.attention_at %} {{ badge("Precisa de atenção", "amber") }}{% endif %}</td>
       <td>{{ row.summary }}</td>
       <td>{{ badge(row.status, row.tone) }}</td>
-      <td>{{ row.deal.created_at.strftime("%d/%m/%Y") }}</td>
+      <td>{{ row.deal.created_at | local("%d/%m/%Y") }}</td>
       <td><a class="mini-btn" href="/admin/oportunidades/{{ row.qualification.id }}">Abrir</a></td>
     </tr>
   {% endfor %}

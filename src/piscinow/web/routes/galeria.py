@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from piscinow.overview.stats import funnel
 from piscinow.qualification.service import known_fields
-from piscinow.web.journey import comprador_journey, consultor_card, stage_overview
+from piscinow.web.journey import buyer_journey, comprador_journey, consultor_card, stage_overview
 from piscinow.web.navigation import AREAS
 
 # Registered only in development (see create_app). Lists every shared component and every
@@ -51,7 +51,7 @@ PAGES = {
     "admin_instalador_atendimento": ("admin_instalador_atendimento.html", "admin", "/admin/prestadores"),
     "comprador_pagamento": ("comprador_pagamento.html", "comprador", "/comprador/projeto"),
     "comprador_inicio": ("comprador_inicio.html", "comprador", "/comprador"),
-    "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/obra"),
+    "comprador_obra": ("comprador_obra.html", "comprador", "/comprador/projeto"),
     "comprador_consultor": ("comprador_consultor.html", "comprador", "/comprador/consultor"),
     "comprador_consultor_completo": ("comprador_consultor.html", "comprador", "/comprador/consultor"),
     "vitrine_produtos_comprador": ("vitrine_produtos.html", "comprador", "/vitrine/produtos"),
@@ -131,12 +131,14 @@ def _example_context(name: str) -> dict:
         }
     if name == "comprador_inicio":
         return {
-            "first_name": "Marina", "project": NS(status=NS(value="confirmado")),
-            "product": NS(name="Piscina de fibra 7 x 3", category="fibra"),
-            "services": [NS(), NS()],
-            "payment": NS(total_amount=Decimal("21000.00"), status=NS(value="pago")),
-            "journey": comprador_journey(has_product=True, confirmed=True, payment_status="pago", all_released=False),
-            "consultor": consultor_card(started=True, missing=[], consent="concedido", deal_code="OP-0007"),
+            "first_name": "Marina",
+            "journey": buyer_journey(briefing="done", deal_status="proposal_sent", open_proposals=2, payment_status=None,
+                                     all_released=False, project_linked=False),
+            "briefing_summary": "Fibra · Valinhos · 7 x 3 m · Até 90 dias",
+            "briefing_badge": {"label": "Compartilhado", "tone": "green"},
+            "feasibility": {"label": "Aprovada com ressalvas", "tone": "green", "text": "",
+                            "caveats": [{"label": "Terreno", "note": "leve declive no fundo"}]},
+            "accepted": None, "payment": None,
         }
     if name == "comprador_obra":
         rows = [

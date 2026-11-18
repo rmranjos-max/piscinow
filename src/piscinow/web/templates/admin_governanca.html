@@ -18,7 +18,7 @@
   <tbody>
   {% for row in events %}
     <tr>
-      <td>{{ row.event.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+      <td>{{ row.event.created_at | local }}</td>
       <td><a href="/admin/oportunidades/{{ row.qualification_id }}">{{ row.code }}</a></td>
       <td>{{ row.kind_label }}</td>
       <td>{{ row.event.actor }}</td>

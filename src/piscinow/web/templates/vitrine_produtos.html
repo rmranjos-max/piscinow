@@ -4,6 +4,7 @@
 <p class="eyebrow">Vitrine</p>
 <h1>Produtos</h1>
 <p class="sub">Piscinas e equipamentos das lojas parceiras{% if not comprador %}. Os valores aparecem depois que você entra{% endif %}.</p>
+{% if comprador %}<p class="muted">Gostou de um modelo? <a href="/comprador/consultor">Conte para a assistente</a>: as lojas mandam propostas para o seu projeto, com o valor fechado.</p>{% endif %}
 
 <form method="get" action="/vitrine/produtos" class="card">
   <div class="filters">
@@ -42,10 +43,6 @@
       <p class="muted small">{{ item.loja.name }}{% if item.loja.region %} · {{ item.loja.region }}{% endif %}</p>
       {% if comprador %}
       <p class="product-price">R$ {{ item.product.price | brl }}</p>
-      <form method="post" action="/comprador/projeto/produto">
-        <input type="hidden" name="product_id" value="{{ item.product.id }}">
-        <button class="btn" type="submit">Escolher</button>
-      </form>
       {% endif %}
     </div>
   </li>

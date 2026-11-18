@@ -17,6 +17,7 @@ from piscinow.config import get_settings
 from piscinow.payment.providers.fake_provider import FakePaymentProvider
 from piscinow.rate_limit import limiter
 from piscinow.web.navigation import shell_context
+from piscinow.web.timefmt import local as local_time
 from piscinow.web.origin_check import OriginCheckMiddleware
 from piscinow.web.sensitive_headers import SensitivePathHeadersMiddleware
 from piscinow.web.routes import (
@@ -60,6 +61,7 @@ def _format_brl(value) -> str:
 
 
 TEMPLATES.env.filters["brl"] = _format_brl
+TEMPLATES.env.filters["local"] = local_time
 
 
 @asynccontextmanager

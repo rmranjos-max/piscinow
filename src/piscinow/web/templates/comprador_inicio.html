@@ -3,69 +3,67 @@
 {% block title %}Início{% endblock %}
 {% block content %}
 <p class="eyebrow">Seu espaço</p>
-<h1>Olá, {{ first_name }}.</h1>
-<p class="sub">Aqui você acompanha o seu projeto de piscina do começo ao fim.</p>
+<h1>Olá{% if first_name %}, {{ first_name }}{% endif %}.</h1>
+<p class="sub">Um caminho só, do primeiro bate-papo até a obra. Você sempre vê onde está e o que fazer agora.</p>
 
 {{ stepper(journey.steps) }}
 
+<section class="card next-step cta-card" aria-labelledby="proximo">
+  {{ badge("Próximo passo") }}
+  <h2 id="proximo">{{ journey.next.title }}</h2>
+  <p>{{ journey.next.text }}</p>
+  {% if journey.next.href %}<a class="btn accent" href="{{ journey.next.href }}">{{ journey.next.cta }}</a>{% endif %}
+</section>
+
 <div class="grid cols2">
-  <section class="card next-step cta-card" aria-labelledby="proximo">
-    {{ badge("Próximo passo") }}
-    <h2 id="proximo">{{ journey.next.title }}</h2>
-    <p>{{ journey.next.text }}</p>
-    {% if journey.next.href %}<a class="btn accent" href="{{ journey.next.href }}">{{ journey.next.cta }}</a>{% endif %}
+  <section class="card" aria-labelledby="briefing">
+    <div class="row-between">
+      <h3 id="briefing">Seu briefing</h3>
+      {{ badge(briefing_badge.label, briefing_badge.tone) }}
+    </div>
+    <p class="muted">{{ briefing_summary or "Ainda não começou. A assistente faz as perguntas por você." }}</p>
+    <a href="/comprador/consultor">{{ "Ver ou corrigir com a assistente" if briefing_summary else "Conversar com a assistente" }}</a>
   </section>
 
-  <section class="card" aria-labelledby="consultor">
+  {% if feasibility %}
+  <section class="card" aria-labelledby="viabilidade">
     <div class="row-between">
-      <h3 id="consultor">{{ consultor.title }}</h3>
-      {{ badge(consultor.badge, consultor.tone) }}
+      <h3 id="viabilidade">Viabilidade do terreno</h3>
+      {{ badge(feasibility.label, feasibility.tone) }}
     </div>
-    <p class="muted">{{ consultor.text }}</p>
-    <a class="btn" href="{{ consultor.href }}">{{ consultor.cta }}</a>
-  </section>
-
-  {% if deal %}
-  <section class="card" aria-labelledby="propostas">
-    <div class="row-between">
-      <h3 id="propostas">Propostas das lojas</h3>
-      {{ badge("Aceita" if deal.status.value == "accepted" else ("Em aberto" if open_proposals else "Aguardando"), "green" if deal.status.value == "accepted" or open_proposals else "amber") }}
-    </div>
-    <p class="muted">{% if deal.status.value == "accepted" %}Você aceitou uma proposta; a loja escolhida já tem o seu contato.{% elif open_proposals %}{{ open_proposals }} proposta{{ "" if open_proposals == 1 else "s" }} em aberto para comparar.{% else %}As lojas indicadas estão analisando o seu projeto.{% endif %}</p>
-    <a class="btn" href="/comprador/propostas">Ver propostas</a>
+    {% if feasibility.caveats %}
+    <p class="muted">Ponto{{ "" if feasibility.caveats|length == 1 else "s" }} de atenção: {% for c in feasibility.caveats %}{{ c.label|lower }}{% if c.note %} ({{ c.note }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}.</p>
+    {% else %}
+    <p class="muted">{{ feasibility.text }}</p>
+    {% endif %}
   </section>
   {% endif %}
 
-  <section class="card" aria-labelledby="seu-projeto">
+  {% if accepted %}
+  <section class="card" aria-labelledby="projeto">
     <div class="row-between">
-      <h3 id="seu-projeto">Seu projeto</h3>
-      {% if project %}{{ badge("Confirmado" if project.status.value == "confirmado" else "Rascunho", "green" if project.status.value == "confirmado" else "amber") }}{% endif %}
+      <h3 id="projeto">Seu projeto</h3>
+      {{ badge("Proposta aceita", "green") }}
     </div>
-    {% if product %}
-      <p><b>{{ product.name }}</b><br><span class="muted">{{ product.category }}</span></p>
-      <p class="muted">{{ services|length }} serviço{{ "" if services|length == 1 else "s" }} no projeto</p>
-      <a class="btn" href="/comprador/projeto">Ver projeto</a>
-    {% else %}
-      <p class="empty-note">Você ainda não escolheu um produto.</p>
-      <a class="btn" href="/vitrine/produtos">Explorar produtos</a>
-    {% endif %}
+    <div class="project-summary">
+      {% if accepted.photo %}<img src="{{ accepted.photo }}" alt="Foto de {{ accepted.item }}" loading="lazy" width="480" height="360">{% endif %}
+      <p><b>{{ accepted.store }}</b> · versão {{ accepted.version }}<br><span class="muted">{{ accepted.item }}</span><br><b>R$ {{ accepted.total | brl }}</b></p>
+    </div>
+    <a class="btn" href="/comprador/projeto">Ver o projeto</a>
   </section>
+  {% endif %}
 
   {% if payment %}
   <section class="card" aria-labelledby="pagamento">
     <div class="row-between">
-      <h3 id="pagamento">Pagamento</h3>
+      <h3 id="pagamento">Pagamento por fases</h3>
       {{ badge("Pago" if payment.status.value == "pago" else "Pendente", "green" if payment.status.value == "pago" else "amber") }}
     </div>
-    <p>Total do projeto: <b>R$ {{ payment.total_amount | brl }}</b></p>
-    <a class="btn" href="/comprador/projeto/pagamento">Ver pagamento</a>
+    <p>Total: <b>R$ {{ payment.total_amount | brl }}</b></p>
+    <a class="btn" href="{{ '/comprador/obra' if payment.status.value == 'pago' else '/comprador/projeto/pagamento' }}">{{ "Acompanhar a obra" if payment.status.value == "pago" else "Ver pagamento" }}</a>
   </section>
   {% endif %}
-
-  <section class="card" aria-labelledby="obra">
-    <h3 id="obra">Acompanhar obra</h3>
-    <p class="muted">Veja em que fase está o repasse de cada parte do seu projeto.</p>
-    <a class="btn" href="/comprador/obra">Acompanhar fases</a>
-  </section>
 </div>
+
+<p class="muted">Só quer olhar modelos por enquanto? <a href="/vitrine/produtos">Explorar piscinas</a> não muda nada no seu projeto.</p>
 {% endblock %}

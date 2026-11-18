@@ -110,7 +110,7 @@ PAGES = {
     "admin_instalador_atendimento": ("Atendimento · Instalações Sul", "/admin/prestadores"),
     "comprador_pagamento": ("Pagamento do projeto", "/comprador/projeto"),
     "comprador_inicio": ("Olá, Marina.", "/comprador"),
-    "comprador_obra": ("Acompanhar obra", "/comprador/obra"),
+    "comprador_obra": ("Acompanhar obra", "/comprador/projeto"),
     "vitrine_produtos_comprador": ("Produtos", "/vitrine/produtos"),
 }
 
@@ -158,19 +158,20 @@ def test_the_vitrine_for_a_visitor_uses_the_public_layout_and_shows_no_price_or_
     assert "Entrar para ver pre&ccedil;o e montar projeto" in html
 
 
-def test_the_vitrine_for_a_comprador_shows_the_price_and_the_choose_action_inside_the_app(client):
+def test_the_vitrine_for_a_comprador_shows_the_price_but_buying_goes_through_proposals(client):
     html = client.get("/_galeria/pagina/vitrine_produtos_comprador").text
 
     assert 'class="sidebar"' in html
-    assert "R$ 18.000,00" in html and "Escolher" in html
+    assert "R$ 18.000,00" in html and "Escolher" not in html
+    assert 'href="/comprador/consultor"' in html
 
 
-def test_the_comprador_home_shows_the_real_next_step_and_the_project_summary(client):
+def test_the_comprador_home_shows_the_five_step_journey_and_one_next_step(client):
     html = client.get("/_galeria/pagina/comprador_inicio").text
 
-    assert "Acompanhe os repasses" in html
-    assert "Piscina de fibra 7 x 3" in html
-    assert "R$ 21.000,00" in html
+    for step in ["Briefing", "Propostas", "Aceite", "Pagamento por fases", "Obra"]:
+        assert step in html
+    assert "Compare as 2 propostas que chegaram" in html
     assert html.count('aria-current="step"') == 1
 
 

@@ -28,6 +28,7 @@ from piscinow.qualification.deals import CLOSED, STATUS_LABELS, mark_lost, recor
 from piscinow.qualification.fields import FIELDS, label_for
 from piscinow.qualification.service import conversation_of, known_fields, refresh_status, set_field
 from piscinow.web.deps import get_db
+from piscinow.web.timefmt import local as local_time
 
 router = APIRouter(prefix="/admin/oportunidades")
 
@@ -121,7 +122,7 @@ def _detail_context(db: Session, qualification: LeadQualification, error: str | 
     if deal is not None:
         events = [
             {"title": _event_title(e),
-             "detail": f"{e.created_at:%d/%m/%Y %H:%M} · {e.actor}" + (f" · {e.note}" if e.note else "")}
+             "detail": f"{local_time(e.created_at)} · {e.actor}" + (f" · {e.note}" if e.note else "")}
             for e in db.scalars(select(DealEvent).where(DealEvent.deal_id == deal.id).order_by(DealEvent.created_at))
         ]
     conversation = conversation_of(db, qualification)

@@ -79,12 +79,12 @@ def _active_labels(area_key: str, path: str) -> list[str]:
 def test_the_comprador_menu_follows_the_v3_order_and_starts_at_the_home_page():
     labels = [item.label for item in AREAS["comprador"].items]
 
-    assert labels == ["Início", "Consultor", "Propostas", "Explorar produtos", "Explorar serviços", "Meu projeto", "Acompanhar obra"]
+    assert labels == ["Início", "Consultor", "Propostas", "Meu projeto", "Explorar piscinas"]
     assert AREAS["comprador"].home == "/comprador"
 
 
 def test_the_home_item_is_active_only_on_the_home_page_itself():
     assert _active_labels("comprador", "/comprador") == ["Início"]
-    assert _active_labels("comprador", "/comprador/obra") == ["Acompanhar obra"]
+    assert _active_labels("comprador", "/comprador/projeto/pagamento") == ["Meu projeto"]
     assert _active_labels("comprador", "/comprador/projeto") == ["Meu projeto"]
-    assert _active_labels("comprador", "/vitrine/produtos") == ["Explorar produtos"]
+    assert _active_labels("comprador", "/vitrine/produtos") == ["Explorar piscinas"]

@@ -85,7 +85,7 @@
     <h2 id="viab-titulo">Viabilidade</h2>
     {{ badge(feasibility.label, "green" if feasibility.status in ("approved", "conditionally_approved") else "amber") }}
   </div>
-  <p class="muted small">Decisão da equipe. O comprador só consegue aceitar uma proposta com a viabilidade aprovada ou aprovada com ressalvas.{% if feasibility.decided_by %} Última decisão: {{ feasibility.decided_by }}, {{ feasibility.decided_at.strftime("%d/%m/%Y %H:%M") }}.{% endif %}</p>
+  <p class="muted small">Decisão da equipe. O comprador só consegue aceitar uma proposta com a viabilidade aprovada ou aprovada com ressalvas.{% if feasibility.decided_by %} Última decisão: {{ feasibility.decided_by }}, {{ feasibility.decided_at | local }}.{% endif %}</p>
   {% if not closed %}
   <form method="post" action="/admin/oportunidades/{{ qualification.id }}/viabilidade">
     <div class="tablewrap"><table class="admin-table">
@@ -141,7 +141,7 @@
     <h2 id="inst-titulo">Instalação</h2>
     {% if installation.live %}{{ badge(installation.live.label, "green" if installation.live.a.status.value == "aceita" else "amber") }}{% else %}{{ badge("Sem instalador", "amber") }}{% endif %}
   </div>
-  {% if installation.live %}<p>Instalador: <b>{{ installation.live.installer }}</b> · atribuído por {{ installation.live.a.assigned_by }} em {{ installation.live.a.assigned_at.strftime("%d/%m/%Y") }}.</p>{% endif %}
+  {% if installation.live %}<p>Instalador: <b>{{ installation.live.installer }}</b> · atribuído por {{ installation.live.a.assigned_by }} em {{ installation.live.a.assigned_at | local("%d/%m/%Y") }}.</p>{% endif %}
   {% if installation.history %}
   <ul class="plain-list">
     {% for h in installation.history %}
@@ -208,7 +208,7 @@
             <button class="mini-btn" type="submit" name="decisao" value="incluida">Incluir mesmo assim</button>
             {% endif %}
           </form>
-          {% else %}<span class="muted small">Encaminhado em {{ row.decision.shared_at.strftime("%d/%m/%Y") if row.decision.shared_at else "—" }}</span>{% endif %}
+          {% else %}<span class="muted small">Encaminhado em {{ row.decision.shared_at | local("%d/%m/%Y") }}</span>{% endif %}
         </td>
       </tr>
     {% endfor %}

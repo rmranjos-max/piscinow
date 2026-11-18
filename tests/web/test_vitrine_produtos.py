@@ -81,7 +81,7 @@ def test_vitrine_produtos_does_not_require_authentication(client):
     assert response.status_code == 200
 
 
-def test_vitrine_produtos_shows_price_and_choose_button_when_logged_in(client, db_session):
+def test_vitrine_produtos_shows_price_but_no_choose_button_when_logged_in(client, db_session):
     from piscinow.models.member import MemberStatus
 
     comprador = Member(
@@ -102,7 +102,9 @@ def test_vitrine_produtos_shows_price_and_choose_button_when_logged_in(client, d
     response = client.get("/vitrine/produtos")
 
     assert "18.000,00" in response.text
-    assert "Escolher" in response.text
+    # Buying goes through proposals: the vitrine is for browsing.
+    assert "Escolher" not in response.text
+    assert 'href="/comprador/consultor"' in response.text
 
 
 def test_vitrine_produtos_hides_price_when_not_logged_in(client, db_session):

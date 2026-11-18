@@ -7,7 +7,7 @@ from piscinow.models.project import Project, ProjectStatus
 
 
 def _confirm_project(db_session, comprador, product):
-    # O login segue o redirect para /comprador/projeto, que ja cria o rascunho do comprador.
+    # Projeto do caminho antigo (produto escolhido na vitrine), ainda legivel para dados existentes.
     project = db_session.scalar(select(Project).where(Project.member_id == comprador.id))
     if project is None:
         project = Project(member_id=comprador.id)
@@ -35,14 +35,35 @@ def test_projeto_redirects_to_login_when_not_authenticated(client):
     assert response.headers["location"] == "/comprador/login"
 
 
-def test_projeto_creates_draft_on_first_visit(client, db_session):
+def test_projeto_never_creates_a_draft_and_explains_how_the_project_is_born(client, db_session):
     comprador = _comprador_logged_in(client, db_session)
 
     response = client.get("/comprador/projeto")
 
     assert response.status_code == 200
-    project = db_session.query(Project).filter(Project.member_id == comprador.id).one()
-    assert project.status.value == "rascunho"
+    assert db_session.query(Project).filter(Project.member_id == comprador.id).count() == 0
+    assert "nasce quando você aceita a proposta" in response.text
+
+
+def test_projeto_shows_the_accepted_proposal_with_its_items_and_the_payment_state(client, db_session):
+    from piscinow.proposals.service import accept_proposal
+    from tests.proposals.test_service import _approve_feasibility, _loja, _send, _setup
+
+    loja = _loja(db_session)
+    buyer, _, deal, decisions = _setup(db_session, loja)
+    _approve_feasibility(db_session, deal)
+    accept_proposal(db_session, _send(db_session, decisions[loja.id]), buyer)
+    buyer.email = "meu.projeto@example.com"
+    buyer.set_password("senha-forte-123")
+    db_session.flush()
+    client.post("/comprador/login", data={"email": "meu.projeto@example.com", "password": "senha-forte-123"})
+
+    page = client.get("/comprador/projeto").text
+
+    assert "Studio Fibra Sul" in page and "Versão 1 aceita" in page
+    assert "Piscina de fibra 7x3" in page and "R$ 21.000,00" in page
+    assert "Em preparação" in page
+    assert "ainda vai indicar o instalador" in page
 
 
 def test_escolher_produto_sets_product_on_project(client, db_session):
